@@ -3,5 +3,5 @@
 version = 3
 
 [[package]]
-name = "webgpu-compute"
+name = "metal"
 version = "0.1.0"
