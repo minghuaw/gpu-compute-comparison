@@ -1,5 +1,6 @@
-use std::ops::{Add, AddAssign};
-
+use ndarray::{ArrayBase, OwnedRepr};
+use ndarray_rand::RandomExt;
+use rand::distributions::Uniform;
 use vulkano::{
     buffer::{Buffer, BufferCreateInfo, BufferUsage},
     command_buffer::{
@@ -23,11 +24,25 @@ fn main() {
     let library = VulkanLibrary::new().expect("no local Vulkan library/DLL");
     let instance =
         Instance::new(library, InstanceCreateInfo::default()).expect("failed to create instance");
+    
+    // Prioritize discrete GPUs
     let physical_device = instance
         .enumerate_physical_devices()
-        .expect("could not enumerate devices")
+        .expect("failed to enumerate devices")
+        .filter(|device| {
+            matches!(
+                device.properties().device_type,
+                vulkano::device::physical::PhysicalDeviceType::DiscreteGpu
+            )
+        })
         .next()
-        .expect("no devices available");
+        .unwrap_or_else(|| {
+            instance
+                .enumerate_physical_devices()
+                .expect("failed to enumerate devices")
+                .next()
+                .expect("no devices available")
+        });
     let queue_family_index = physical_device
         .queue_family_properties()
         .iter()
@@ -58,7 +73,8 @@ fn main() {
     const N: usize = 4096;
     const K: usize = 4096;
 
-    let matrix_a = generate_row_major_matrix::<i32, M, K>(1);
+    let matrix_a: ArrayBase<OwnedRepr<f32>, _> =
+        ArrayBase::random((M, K), Uniform::new(-1.0, 1.0));
     let matrix_a_buf = Buffer::from_iter(
         &memory_allocator,
         BufferCreateInfo {
@@ -73,7 +89,8 @@ fn main() {
     )
     .expect("failed to create buffer");
 
-    let matrix_b = generate_row_major_matrix::<i32, K, N>(1);
+    let matrix_b: ArrayBase<OwnedRepr<f32>, _> =
+        ArrayBase::random((K, N), Uniform::new(-1.0, 1.0));
     let matrix_b_buf = Buffer::from_iter(
         &memory_allocator,
         BufferCreateInfo {
@@ -88,7 +105,7 @@ fn main() {
     )
     .expect("failed to create buffer");
 
-    let matrix_c = vec![0i32; N * M];
+    let matrix_c: ArrayBase<OwnedRepr<f32>, _> = ArrayBase::zeros((M, N));
     let matrix_c_buf = Buffer::from_iter(
         &memory_allocator,
         BufferCreateInfo {
@@ -103,7 +120,8 @@ fn main() {
     )
     .expect("failed to create buffer");
 
-    let shader = kernels::matmul::naive::load(device.clone()).expect("failed to create shader module");
+    let shader =
+        kernels::matmul::naive::load(device.clone()).expect("failed to create shader module");
     let compute_pipeline = ComputePipeline::new(
         device.clone(),
         shader.entry_point("main").unwrap(),
@@ -176,33 +194,4 @@ fn main() {
     // println!("Content: {:?}", &content[..]);
 
     println!("Everything succeeded!");
-}
-
-pub(crate) fn generate_matrix<T, const R: usize, const C: usize>(step: T) -> Vec<[T; C]>
-where
-    T: Copy + Default + Add<T> + AddAssign<T>,
-{
-    let mut ret = vec![[T::default(); C]; R];
-    let mut next = T::default();
-
-    ret.iter_mut()
-        .for_each(|row| row.iter_mut().for_each(|elem| {
-            *elem = next;
-            next += step;
-        }));
-    ret
-}
-
-fn generate_row_major_matrix<T, const R: usize, const C: usize>(step: T) -> Vec<T>
-where
-    T: Copy + Default + Add<T> + AddAssign<T>,
-{
-    let mut ret = vec![T::default(); R * C];
-    let mut next = T::default();
-
-    ret.iter_mut().for_each(|elem| {
-        *elem = next;
-        next += step;
-    });
-    ret
 }

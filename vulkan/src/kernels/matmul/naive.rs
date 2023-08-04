@@ -6,15 +6,15 @@ vulkano_shaders::shader! {
         layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
         layout(set = 0, binding = 0) buffer readonly MatrixA {
-            int matrix_a[];
+            float matrix_a[];
         };
 
         layout(set = 0, binding = 1) buffer readonly MatrixB {
-            int matrix_b[];
+            float matrix_b[];
         };
 
         layout(set = 0, binding = 2) buffer writeonly MatrixC {
-            int matrix_c[];
+            float matrix_c[];
         };
 
         void main() {
@@ -29,7 +29,7 @@ vulkano_shaders::shader! {
                 return;
             }
 
-            int sum = 0;
+            float sum = 0;
             for (uint k = 0; k < K; k++) {
                 const uint a_index = row * K + k;
                 const uint b_index = k * N + col;
