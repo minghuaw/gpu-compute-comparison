@@ -19,14 +19,14 @@ void main() {
     const uint row = gl_GlobalInvocationID.x;
     const uint col = gl_GlobalInvocationID.y;
 
-    if(row >= 1024 || col >= 1024) {
+    if(row >= 4096 || col >= 4096) {
         return;
     }
 
     int sum = 0;
-    for(uint i = 0; i < 1024; i++) {
-        sum += matrix_a[row * 1024 + i] * matrix_b[i * 1024 + col];
+    for(uint i = 0; i < 4096; i++) {
+        sum += matrix_a[row * 4096 + i] * matrix_b[i * 4096 + col];
     }
 
-    matrix_c[row * 1024 + col] = sum;
+    matrix_c[row * 4096 + col] = sum;
 }
