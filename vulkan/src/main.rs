@@ -191,7 +191,5 @@ fn main() {
 
     let content = matrix_c_buf.read().unwrap();
     println!("Element: {}", content[M * N - 1]);
-    // println!("Content: {:?}", &content[..]);
-
     println!("Everything succeeded!");
 }
