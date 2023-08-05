@@ -22,8 +22,12 @@ mod kernels;
 
 fn main() {
     let library = VulkanLibrary::new().expect("no local Vulkan library/DLL");
+    let create_info = InstanceCreateInfo {
+        enumerate_portability: true, // required for MoltenVK on macOS
+        ..Default::default()
+    };
     let instance =
-        Instance::new(library, InstanceCreateInfo::default()).expect("failed to create instance");
+        Instance::new(library, create_info).expect("failed to create instance");
     
     // Prioritize discrete GPUs
     let physical_device = instance
