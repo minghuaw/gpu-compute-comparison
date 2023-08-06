@@ -1,3 +1,8 @@
+use metal::*;
+use objc::rc::autoreleasepool;
+
 fn main() {
-    println!("Hello, world!");
+    autoreleasepool(|| {
+        println!("Hello, world!");
+    })
 }
