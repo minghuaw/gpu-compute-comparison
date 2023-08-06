@@ -3,5 +3,5 @@
 version = 3
 
 [[package]]
-name = "metal"
+name = "metal-compute-shader"
 version = "0.1.0"

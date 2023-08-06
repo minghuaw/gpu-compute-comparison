@@ -193,7 +193,7 @@ fn main() {
     let elapsed = start.elapsed();
     println!("Elapsed: {:?}", elapsed);
 
-    let content = matrix_c_buf.read().unwrap();
-    println!("Element: {}", content[M * N - 1]);
-    println!("Everything succeeded!");
+    // let content = matrix_c_buf.read().unwrap();
+    // println!("Element: {}", content[M * N - 1]);
+    // println!("Everything succeeded!");
 }

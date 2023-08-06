@@ -625,7 +625,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "vulkan"
+name = "vulkan-compute-shader"
 version = "0.1.0"
 dependencies = [
  "ndarray",

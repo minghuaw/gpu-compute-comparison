@@ -1,13 +1,13 @@
 [package]
-name = "vulkan"
+name = "webgpu-compute-shader"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-rand = "0.8.5"
-vulkano = "0.33"
-vulkano-shaders = { version = "0.33.0" }
+wgpu = "0.17"
+bytemuck = "1"
 ndarray = "0.15"
 ndarray-rand = "0.14"
+pollster = "0.3"
