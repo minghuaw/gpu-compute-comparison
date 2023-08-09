@@ -8,3 +8,6 @@ edition = "2021"
 [dependencies]
 metal = "0.26.0"
 objc = "0.2.7"
+rand = "0.8.5"
+ndarray = "0.15"
+ndarray-rand = "0.14"
