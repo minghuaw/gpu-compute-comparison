@@ -1,2 +1,4 @@
 **/target
 **/build
+**/cmake-build-debug
+**/.idea
