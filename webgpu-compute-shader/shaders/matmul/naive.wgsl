@@ -17,8 +17,8 @@ const K: u32 = 4096u;
 @compute
 @workgroup_size(8, 8, 1)
 fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
-    let row = global_id.x;
-    let col = global_id.y;
+    let col = global_id.x;
+    let row = global_id.y;
 
     if (row >= M) || (col >= N) {
         return;

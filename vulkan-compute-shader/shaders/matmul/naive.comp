@@ -15,8 +15,8 @@ layout(set = 0, binding = 2) buffer writeonly MatrixC {
 };
 
 void main() {
-    const uint row = gl_GlobalInvocationID.x;
-    const uint col = gl_GlobalInvocationID.y;
+    const uint col = gl_GlobalInvocationID.x;
+    const uint row = gl_GlobalInvocationID.y;
     
     const uint M = 4096;
     const uint N = 4096;
