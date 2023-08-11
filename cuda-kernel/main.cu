@@ -88,12 +88,6 @@ int main() {
     cudaMemcpy(host_matrix_c, device_matrix_c, sizeof(float) * M * N, cudaMemcpyDeviceToHost);
     cudaDeviceSynchronize();
 
-//    uint i = 100;
-//    uint j = 100;
-//    printf("A[%d][%d] = %f\n", i, j, host_matrix_a[i * N + j]);
-//    printf("B[%d][%d] = %f\n", i, j, host_matrix_b[i * N + j]);
-//    printf("C[%d][%d] = %f\n", i, j, host_matrix_c[i * N + j]);
-
     free(host_matrix_a);
     free(host_matrix_b);
     free(host_matrix_c);
@@ -101,6 +95,5 @@ int main() {
     cudaFree(device_matrix_b);
     cudaFree(device_matrix_c);
 
-//    std::cout << "Hello, World!" << std::endl;
     return 0;
 }
