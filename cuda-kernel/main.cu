@@ -80,7 +80,7 @@ int main() {
     cudaEventSynchronize(end);
     cudaEventElapsedTime(&elapsed_time, beg, end);
 
-    printf("Average elapsed time: (%f) second, performance: (%f) GFLOPS. size: (%d).\n",
+    printf("Average elapsed time: (%f) ms, performance: (%f) GFLOPS. size: (%d).\n",
            elapsed_time / (float)repeats, 2. * 1e-9 * (float)repeats * M * M * M / elapsed_time, M);
 
     cudaMemcpy(host_matrix_a, device_matrix_a, sizeof(float) * M * K, cudaMemcpyDeviceToHost);

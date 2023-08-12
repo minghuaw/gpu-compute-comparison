@@ -17,8 +17,38 @@ use vulkano::{
     sync::{self, GpuFuture},
     VulkanLibrary,
 };
+use vulkano::shader::{SpecializationConstants, SpecializationMapEntry};
 
 mod kernels;
+
+#[repr(C)]
+struct WorkgroupSize {
+    x: u32,
+    y: u32,
+    z: u32,
+}
+
+unsafe impl SpecializationConstants for WorkgroupSize {
+    fn descriptors() -> &'static [SpecializationMapEntry] {
+        &[
+            SpecializationMapEntry {
+                constant_id: 0,
+                offset: 0,
+                size: std::mem::size_of::<u32>(),
+            },
+            SpecializationMapEntry {
+                constant_id: 1,
+                offset: std::mem::size_of::<u32>() as u32,
+                size: std::mem::size_of::<u32>(),
+            },
+            SpecializationMapEntry {
+                constant_id: 2,
+                offset: 2 * std::mem::size_of::<u32>() as u32,
+                size: std::mem::size_of::<u32>(),
+            },
+        ]
+    }
+}
 
 fn main() {
     let library = VulkanLibrary::new().expect("no local Vulkan library/DLL");
@@ -124,12 +154,17 @@ fn main() {
     )
     .expect("failed to create buffer");
 
+    let workgroup_size = WorkgroupSize {
+        x: 8,
+        y: 8,
+        z: 1,
+    };
     let shader =
         kernels::matmul::naive::load(device.clone()).expect("failed to create shader module");
     let compute_pipeline = ComputePipeline::new(
         device.clone(),
         shader.entry_point("main").unwrap(),
-        &(),
+        &workgroup_size, // Set workgroup size here
         None,
         |_| {},
     )
