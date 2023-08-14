@@ -17,30 +17,30 @@ layout(set = 0, binding = 2) buffer writeonly MatrixC {
 const uint M = 4096;
 const uint N = 4096;
 const uint K = 4096;
-const uint block_size_m = 32;
-const uint block_size_n = 32;
-const uint block_size_k = 32;
+const uint BM = 32;
+const uint BN = 32;
+const uint BK = 32;
 
-shared float shared_a[block_size_m * block_size_k];
-shared float shared_b[block_size_k * block_size_n];
+shared float shared_a[BM * BK];
+shared float shared_b[BK * BN];
 
 void main() {
-    uint global_a_offset = gl_WorkGroupID.y * block_size_m * K;
-    uint global_b_offset = gl_WorkGroupID.x * block_size_n;
-    uint global_c_offset = gl_WorkGroupID.y * block_size_m * N + gl_WorkGroupID.x * block_size_n;
+    uint global_a_offset = gl_WorkGroupID.y * BM * K;
+    uint global_b_offset = gl_WorkGroupID.x * BN;
+    uint global_c_offset = gl_WorkGroupID.y * BM * N + gl_WorkGroupID.x * BN;
     
-    uint local_x = gl_LocalInvocationIndex % block_size_n;
-    uint local_y = gl_LocalInvocationIndex / block_size_n;
+    uint local_x = gl_LocalInvocationIndex % BN;
+    uint local_y = gl_LocalInvocationIndex / BN;
 
     float sum = 0.0;
-    for (uint k = 0; k < K; k += block_size_k) {
-        shared_a[local_y * block_size_k + local_x] = matrix_a[global_a_offset + local_y * K + k + local_x];
-        shared_b[local_y * block_size_n + local_x] = matrix_b[global_b_offset + (local_y + k) * N + local_x];
+    for (uint k = 0; k < K; k += BK) {
+        shared_a[local_y * BK + local_x] = matrix_a[global_a_offset + local_y * K + k + local_x];
+        shared_b[local_y * BN + local_x] = matrix_b[global_b_offset + (local_y + k) * N + local_x];
 
         barrier();
 
-        for (uint i = 0; i < block_size_k; i++) {
-            sum += shared_a[local_y * block_size_k + i] * shared_b[i * block_size_n + local_x];
+        for (uint i = 0; i < BK; i++) {
+            sum += shared_a[local_y * BK + i] * shared_b[i * BN + local_x];
         }
         barrier();
     }

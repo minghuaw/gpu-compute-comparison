@@ -60,8 +60,9 @@ int main() {
     dim3 grid_size(M / BM, N / BN, 1);
 
     // warm up
-    matmul::naive<<<grid_size, block_size>>>(device_matrix_a, device_matrix_b, device_matrix_c);
-    matmul::naive<<<grid_size, block_size>>>(device_matrix_a, device_matrix_b, device_matrix_c);
+//    matmul::naive<<<grid_size, block_size>>>(device_matrix_a, device_matrix_b, device_matrix_c);
+//    matmul::naive<<<grid_size, block_size>>>(device_matrix_a, device_matrix_b, device_matrix_c);
+//    matmul::cache_blocking<<<grid_size, block_size>>>(device_matrix_a, device_matrix_b, device_matrix_c);
     cudaDeviceSynchronize();
 
     float elapsed_time;
@@ -72,7 +73,8 @@ int main() {
     cudaEventRecord(beg);
     uint repeats = 1;
     for (uint i = 0; i < repeats; i++) {
-        matmul::naive<<<grid_size, block_size>>>(device_matrix_a, device_matrix_b, device_matrix_c);
+//        matmul::naive<<<grid_size, block_size>>>(device_matrix_a, device_matrix_b, device_matrix_c);
+        matmul::cache_blocking<<<grid_size, block_size>>>(device_matrix_a, device_matrix_b, device_matrix_c);
     }
     cudaEventRecord(end);
 

@@ -43,27 +43,27 @@ kernel void cache_blocking(
     const uint K = 4096;
 
     // TODO: This can be passed in as a kernel argument
-    const uint block_size_m = 32;
-    const uint block_size_n = 32;
-    const uint block_size_k = 32;
+    const uint BM = 32;
+    const uint BN = 32;
+    const uint BK = 32;
 
-    uint global_a_offset = group_id.y * block_size_m * K;
-    uint global_b_offset = group_id.x * block_size_n;
-    uint global_c_offset = group_id.y * block_size_m * N + group_id.x * block_size_n;
+    uint global_a_offset = group_id.y * BM * K;
+    uint global_b_offset = group_id.x * BN;
+    uint global_c_offset = group_id.y * BM * N + group_id.x * BN;
 
-    uint local_x = thread_index % block_size_n;
-    uint local_y = thread_index / block_size_n;
+    uint local_x = thread_index % BN;
+    uint local_y = thread_index / BN;
 
     float sum = 0.0f;
-    for (uint k = 0; k < K; k += block_size_k) {
-        shared_a[local_y * block_size_k + local_x] = matrix_a[global_a_offset + local_y * K + k + local_x];
-        shared_b[local_y * block_size_n + local_x] = matrix_b[global_b_offset + (local_y + k) * N + local_x];
+    for (uint k = 0; k < K; k += BK) {
+        shared_a[local_y * BK + local_x] = matrix_a[global_a_offset + local_y * K + k + local_x];
+        shared_b[local_y * BN + local_x] = matrix_b[global_b_offset + (local_y + k) * N + local_x];
         
         threadgroup_barrier(mem_flags::mem_threadgroup);
 
         float sum = 0.0f;
-        for (uint i = 0; i < block_size_k; i++) {
-            sum += shared_a[local_y * block_size_k + i] * shared_b[i * block_size_n + local_x];
+        for (uint i = 0; i < BK; i++) {
+            sum += shared_a[local_y * BK + i] * shared_b[i * BN + local_x];
         }
         threadgroup_barrier(mem_flags::mem_threadgroup);
     }
