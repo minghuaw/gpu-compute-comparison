@@ -47,7 +47,7 @@ kernel void cache_blocking(
     const uint block_size_k = 8;
 
     uint global_a_offset = group_id.y * block_size_m * K;
-    uint global_b_offset = group_id.x * block_size_n * K;
+    uint global_b_offset = group_id.x * block_size_n;
     uint global_c_offset = group_id.y * block_size_m * N + group_id.x * block_size_n;
 
     uint local_x = thread_index % block_size_n;
