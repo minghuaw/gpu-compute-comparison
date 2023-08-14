@@ -12,6 +12,7 @@ kernel void naive(
     const uint N = 4096;
     const uint K = 4096;
 
+    // Somehow metal performs better when row and col are not swapped
     uint row = gid.x;
     uint col = gid.y;
 
