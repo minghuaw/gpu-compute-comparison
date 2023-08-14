@@ -35,6 +35,9 @@ fn main() {
         const M: usize = 4096;
         const N: usize = 4096;
         const K: usize = 4096;
+        const BM: usize = 32;
+        const BN: usize = 32;
+        const BK: usize = 32;
 
         let matrix_a: ArrayBase<OwnedRepr<f32>, _> =
             ArrayBase::random((M, K), Uniform::new(-1.0, 1.0));
@@ -65,16 +68,16 @@ fn main() {
 
         // let num_threads = pipeline_state.thread_execution_width();
 
-        let width = if M % 8 == 0 { M / 8 } else { M / 8 + 1 } as u64;
-        let height = if N % 8 == 0 { N / 8 } else { N / 8 + 1 } as u64;
+        let width = if M % BM == 0 { M / BM } else { M / BM + 1 } as u64;
+        let height = if N % BN == 0 { N / BN } else { N / BN + 1 } as u64;
         let thread_groups_count = MTLSize {
             width,
             height,
             depth: 1,
         };
         let threads_per_threadgroup = MTLSize {
-            width: 8,
-            height: 8,
+            width: BM,
+            height: BN,
             depth: 1,
         };
         encoder.dispatch_thread_groups(thread_groups_count, threads_per_threadgroup);

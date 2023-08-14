@@ -29,6 +29,9 @@ async fn run() {
     const M: usize = 4096;
     const N: usize = 4096;
     const K: usize = 4096;
+    const BM: usize = 32;
+    const BN: usize = 32;
+    const BK: usize = 32;
 
     let matrix_a: ArrayBase<OwnedRepr<f32>, _> = ArrayBase::random((M, K), Uniform::new(-1.0, 1.0));
     let matrix_a_buf = device.create_buffer_init(&BufferInitDescriptor {
@@ -90,8 +93,8 @@ async fn run() {
         cpass.set_pipeline(&compute_pipeline);
         cpass.set_bind_group(0, &bind_group, &[]);
 
-        let x = if M % 8 == 0 { M / 8 } else { M / 8 + 1 } as u32;
-        let y = if N % 8 == 0 { N / 8 } else { N / 8 + 1 } as u32;
+        let x = if M % BM == 0 { M / BM } else { M / BM + 1 } as u32;
+        let y = if N % BN == 0 { N / BN } else { N / BN + 1 } as u32;
         cpass.dispatch_workgroups(x, y, 1);
     }
 

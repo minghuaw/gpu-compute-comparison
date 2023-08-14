@@ -54,8 +54,8 @@ int main() {
     cudaCheck(cudaMemcpy(device_matrix_c, host_matrix_c, sizeof(float) * M * N, cudaMemcpyHostToDevice));
     cudaDeviceSynchronize();
 
-    uint BM = 8;
-    uint BN = 8;
+    uint BM = 32;
+    uint BN = 32;
     dim3 block_size(BM, BN, 1);
     dim3 grid_size(M / BM, N / BN, 1);
 

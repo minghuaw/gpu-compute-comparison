@@ -76,6 +76,9 @@ fn main() {
     const M: usize = 4096;
     const N: usize = 4096;
     const K: usize = 4096;
+    const BM: usize = 32;
+    const BN: usize = 32;
+    const BK: usize = 32;
 
     let matrix_a: ArrayBase<OwnedRepr<f32>, _> =
         ArrayBase::random((M, K), Uniform::new(-1.0, 1.0));
@@ -168,8 +171,8 @@ fn main() {
     )
     .unwrap();
 
-    let x = if M % 8 == 0 { M / 8 } else { M / 8 + 1 } as u32;
-    let y = if N % 8 == 0 { N / 8 } else { N / 8 + 1 } as u32;
+    let x = if M % BM == 0 { M / BM } else { M / BM + 1 } as u32;
+    let y = if N % BN == 0 { N / BN } else { N / BN + 1 } as u32;
     let work_group_counts = [x, y, 1];
 
     command_buffer_builder

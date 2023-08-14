@@ -26,6 +26,8 @@ namespace matmul {
         }
         matrix_c[row * N + col] = sum;
     }
+
+    __global__ void cache_blocking()
 }
 
 #endif //CUDA_KERNEL_MATMUL_CUH

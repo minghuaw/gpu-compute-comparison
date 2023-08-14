@@ -21,7 +21,7 @@ var<workgroup> shared_a: array<f32, 64>;
 var<workgroup> shared_b: array<f32, 64>;
 
 @compute
-@workgroup_size(8, 8, 1)
+@workgroup_size(32, 32, 1)
 fn main(
     @builtin(workgroup_id) group_id: vec3<u32>,
     @builtin(local_invocation_index) local_index: u32,

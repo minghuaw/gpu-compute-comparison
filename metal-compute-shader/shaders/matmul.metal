@@ -42,9 +42,10 @@ kernel void cache_blocking(
     const uint N = 4096;
     const uint K = 4096;
 
-    const uint block_size_m = 8;
-    const uint block_size_n = 8;
-    const uint block_size_k = 8;
+    // TODO: This can be passed in as a kernel argument
+    const uint block_size_m = 32;
+    const uint block_size_n = 32;
+    const uint block_size_k = 32;
 
     uint global_a_offset = group_id.y * block_size_m * K;
     uint global_b_offset = group_id.x * block_size_n;
