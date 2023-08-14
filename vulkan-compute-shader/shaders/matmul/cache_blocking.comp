@@ -21,8 +21,8 @@ const uint block_size_m = 8;
 const uint block_size_n = 8;
 const uint block_size_k = 8;
 
-shared float shared_a[8 * 8];
-shared float shared_b[8 * 8];
+shared float shared_a[block_size_m * block_size_k];
+shared float shared_b[block_size_k * block_size_n];
 
 void main() {
     uint global_a_offset = gl_WorkGroupID.y * block_size_m * K;

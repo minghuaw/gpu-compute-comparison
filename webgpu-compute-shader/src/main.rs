@@ -51,7 +51,8 @@ async fn run() {
         usage: BufferUsages::STORAGE,
     });
 
-    let shader = kernels::matmul::naive::load(&device);
+    // let shader = kernels::matmul::naive::load(&device);
+    let shader = kernels::matmul::cache_blocking::load(&device);
     let compute_pipeline = device.create_compute_pipeline(&ComputePipelineDescriptor {
         label: None,
         layout: None,
