@@ -159,8 +159,10 @@ fn main() {
         y: 8,
         z: 1,
     };
-    let shader =
-        kernels::matmul::naive::load(device.clone()).expect("failed to create shader module");
+    // let shader =
+    //     kernels::matmul::naive::load(device.clone()).expect("failed to create shader module");
+    let shader = kernels::matmul::cache_blocking::load(device.clone())
+        .expect("failed to create shader module");
     let compute_pipeline = ComputePipeline::new(
         device.clone(),
         shader.entry_point("main").unwrap(),
