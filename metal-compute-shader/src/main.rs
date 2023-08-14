@@ -19,7 +19,8 @@ fn main() {
         let library_path =
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("shaders/matmul.metallib");
         let library = device.new_library_with_file(library_path).unwrap();
-        let kernel = library.get_function("naive", None).unwrap();
+        // let kernel = library.get_function("naive", None).unwrap();
+        let kernel = library.get_function("cache_blocking", None).unwrap();
 
         let pipepine_state_descriptor = ComputePipelineDescriptor::new();
         pipepine_state_descriptor.set_compute_function(Some(&kernel));

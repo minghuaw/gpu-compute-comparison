@@ -34,9 +34,11 @@ void main() {
 
     float sum = 0.0;
     for (uint k = 0; k < K; k += block_size_k) {
-        shared_a[local_y * block_size_k + local_x] = matrix_a[(global_a_offset + k) + local_y * K + local_x];
-        shared_b[local_y * block_size_n + local_x] = matrix_b[(global_b_offset + k) + local_y * N + local_x];
+        shared_a[local_y * block_size_k + local_x] = matrix_a[global_a_offset + local_y * K + k + local_x];
+        shared_b[local_y * block_size_n + local_x] = matrix_b[global_b_offset + (local_y + k) * N + local_x];
+
         barrier();
+
         for (uint i = 0; i < block_size_k; i++) {
             sum += shared_a[local_y * block_size_k + i] * shared_b[i * block_size_n + local_x];
         }
