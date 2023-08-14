@@ -16,11 +16,15 @@ async fn run() {
                 .next()
                 .expect("failed to find an adapter")
         });
+    let limits = wgpu::Limits {
+        max_compute_invocations_per_workgroup: 1024,
+        ..Default::default()
+    };
     let (device, queue) = adapter.request_device(
         &wgpu::DeviceDescriptor {
             label: None,
             features: wgpu::Features::empty(),
-            limits: wgpu::Limits::default(),
+            limits,
         },
         None,
     ).await
@@ -31,7 +35,6 @@ async fn run() {
     const K: usize = 4096;
     const BM: usize = 32;
     const BN: usize = 32;
-    const BK: usize = 32;
 
     let matrix_a: ArrayBase<OwnedRepr<f32>, _> = ArrayBase::random((M, K), Uniform::new(-1.0, 1.0));
     let matrix_a_buf = device.create_buffer_init(&BufferInitDescriptor {

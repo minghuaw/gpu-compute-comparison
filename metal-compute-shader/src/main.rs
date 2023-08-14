@@ -37,7 +37,6 @@ fn main() {
         const K: usize = 4096;
         const BM: usize = 32;
         const BN: usize = 32;
-        const BK: usize = 32;
 
         let matrix_a: ArrayBase<OwnedRepr<f32>, _> =
             ArrayBase::random((M, K), Uniform::new(-1.0, 1.0));
