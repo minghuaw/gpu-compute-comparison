@@ -55,13 +55,30 @@ namespace matmul {
 
             __syncthreads();
 
-            float sum = 0.0f;
             for (uint i = 0; i < BK; i++) {
                 sum += shared_a[local_y * BK + i] * shared_b[i * BN + local_x];
             }
             __syncthreads();
         }
         matrix_c[global_c_offset + local_y * N + local_x] = sum;
+    }
+
+    /// 2D block tiling matrix multiplication kernel
+    __global__ void tiling(const float *matrix_a, const float *matrix_b, float *matrix_c) {
+        const uint M = 4096;
+        const uint N = 4096;
+        const uint K = 4096;
+
+        const uint BM = 32;
+        const uint BN = 32;
+        const uint BK = 32;
+
+        const uint TM = 8;
+        const uint TN = 8;
+
+        uint thread_index = threadIdx.y * blockDim.x + threadIdx.x;
+        uint local_x = thread_index % BN;
+        uint local_y = thread_index / BN;
     }
 }
 
