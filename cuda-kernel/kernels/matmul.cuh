@@ -76,9 +76,75 @@ namespace matmul {
         const uint TM = 8;
         const uint TN = 8;
 
+        __shared__ float shared_a[BM * BK];
+        __shared__ float shared_b[BK * BN];
+
+        uint num_threads_per_block = (BM * BN) / (TM * TN);
+
         uint thread_index = threadIdx.y * blockDim.x + threadIdx.x;
-        uint local_x = thread_index % BN;
-        uint local_y = thread_index / BN;
+        uint thread_x = thread_index / (BN / TN);
+        uint thread_y = thread_index % (BN / TN);
+
+        float tile_a[TM];
+        float tile_b[TN];
+        float tile_c[TM * TN];
+
+        for (uint global_k=0; global_k<BK; global_k+=BK) {
+            for (uint i=0; i<BM*BK; i+=num_threads_per_block) {
+                uint block_index = i + thread_index;
+                uint block_i = block_index / BK;
+                uint block_j = block_index % BK;
+                uint global_i = blockIdx.x * BM + block_i;
+                uint global_j = global_k + block_j;
+                if (global_i < M && global_j < K) {
+                    shared_a[block_index] = matrix_a[global_i * K + global_j];
+                } else {
+                    shared_a[block_index] = 0;
+                }
+            }
+            for (uint i=0; i<BM*BN; i+=num_threads_per_block) {
+                uint block_index = i + thread_index;
+                uint block_i = block_index / BN;
+                uint block_j = block_index % BN;
+                uint global_i = global_k + block_i;
+                uint global_j = blockIdx.y * BN + block_j;
+                if (global_i < K && global_j < N) {
+                    shared_b[block_index] = matrix_b[global_i * N + global_j];
+                } else {
+                    shared_b[block_index] = 0;
+                }
+            }
+            __syncthreads();
+
+            for (uint block_k=0; block_k<BK; block_k++) {
+                for (uint tile_i=0; tile_i<TM; tile_i++) {
+                    tile_a[tile_i] = shared_a[(thread_x*TM + tile_i) * BK + block_k];
+                }
+                for (uint tile_j=0; tile_j<TN; tile_j++) {
+                    tile_b[tile_j] = shared_b[block_k * BN + (thread_y * TN + tile_j)];
+                }
+
+                for (uint tile_i=0; tile_i < TM; tile_i++) {
+                    for (uint tile_j=0;  tile_j<TN; tile_j++) {
+                        tile_c[tile_i * TM + tile_j] += tile_a[tile_i] * tile_b[tile_j];
+                    }
+                }
+            }
+            __syncthreads();
+        }
+
+        uint global_c_offset = blockIdx.x * BM * N + blockIdx.y * BN;
+        for (uint tile_i=0; tile_i<TM; tile_i++) {
+            for (uint tile_j=0; tile_j<TN; tile_j++) {
+                uint block_i = thread_x * TM + tile_i;
+                uint block_j = thread_y * TN + tile_j;
+                if (blockIdx.x*BM + block_i < M && blockIdx.y * BN + block_j < N) {
+                    uint global_c_index = global_c_offset + block_i * N + block_j;
+                    uint tile_c_index = tile_i * N + tile_j;
+                    matrix_c[global_c_index] = tile_c[tile_c_index];
+                }
+            }
+        }
     }
 }
 
