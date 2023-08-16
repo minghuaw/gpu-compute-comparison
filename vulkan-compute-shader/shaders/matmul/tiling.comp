@@ -1,0 +1,99 @@
+#version 460
+
+const uint M = 4096;
+const uint N = 4096;
+const uint K = 4096;
+const uint BM = 32;
+const uint BN = 32;
+const uint BK = 32;
+const uint TM = 8;
+const uint TN = 8;
+
+layout(local_size_x = BM/TM, local_size_y = BN/TN, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) buffer readonly MatrixA {
+    float matrix_a[];
+};
+
+layout(set = 0, binding = 1) buffer readonly MatrixB {
+    float matrix_b[];
+};
+
+layout(set = 0, binding = 2) buffer writeonly MatrixC {
+    float matrix_c[];
+};
+
+shared float shared_a[BM * BK];
+shared float shared_b[BK * BN];
+
+void main() {
+    uint num_threads_per_block = (BM * BN) / (TM * TN);
+
+    uint thread_x = gl_LocalInvocationIndex / (BN / TN);
+    uint thread_y = gl_LocalInvocationIndex % (BN / TN);
+
+    float tile_a[TM];
+    float tile_b[TN];
+    float tile_c[TM * TN];
+
+    for (uint global_k=0; global_k<BK; global_k+=BK) {
+        for (uint i=0; i<BM*BK; i+=num_threads_per_block) {
+            uint block_index = i + gl_LocalInvocationIndex;
+            if (block_index < BM*BK) {
+                uint block_i = block_index / BK;
+                uint block_j = block_index % BK;
+                uint global_i = gl_WorkGroupID.x * BM + block_i;
+                uint global_j = global_k + block_j;
+                if (global_i < M && global_j < K) {
+                    shared_a[block_index] = matrix_a[global_i * K + global_j];
+                } else {
+                    shared_a[block_index] = 0;
+                }
+            }
+        }
+        for (uint i=0; i<BK*BN; i+=num_threads_per_block) {
+            uint block_index = i + gl_LocalInvocationIndex;
+            if (block_index < BK * BN) {
+                uint block_i = block_index / BN;
+                uint block_j = block_index % BN;
+                uint global_i = global_k + block_i;
+                uint global_j = gl_WorkGroupID.y * BN + block_j;
+                if (global_i < K && global_j < N) {
+                    shared_b[block_index] = matrix_b[global_i * N + global_j];
+                } else {
+                    shared_b[block_index] = 0;
+                }
+            }
+        }
+        barrier();
+
+        for (uint block_k=0; block_k<BK; block_k++) {
+            for (uint tile_i=0; tile_i<TM; tile_i++) {
+                tile_a[tile_i] = shared_a[(thread_x*TM + tile_i) * BK + block_k];
+            }
+            for (uint tile_j=0; tile_j<TN; tile_j++) {
+                tile_b[tile_j] = shared_b[block_k * BN + (thread_y * TN + tile_j)];
+            }
+
+            for (uint tile_i=0; tile_i < TM; tile_i++) {
+                for (uint tile_j=0;  tile_j<TN; tile_j++) {
+                    tile_c[tile_i * TM + tile_j] += tile_a[tile_i] * tile_b[tile_j];
+                }
+            }
+        }
+        barrier();
+    }
+
+    for (uint tile_i=0; tile_i<TM; tile_i++) {
+        for (uint tile_j=0; tile_j<TN; tile_j++) {
+            uint block_i = thread_x * TM + tile_i;
+            uint block_j = thread_y * TN + tile_j;
+            uint global_c_offset = gl_WorkGroupID.x * BM * N + gl_WorkGroupID.y * BN;
+            uint global_c_index = global_c_offset + block_i * N + block_j;
+            uint tile_c_index = tile_i * TM + tile_j;
+            if (global_c_index < M*N && tile_c_index < TM*TN) {
+                matrix_c[global_c_index] = tile_c[tile_c_index];
+            }
+        }
+    }
+}

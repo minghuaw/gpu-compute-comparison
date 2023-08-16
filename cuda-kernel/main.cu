@@ -28,12 +28,27 @@ void cudaCheck(cudaError_t error) {
     }
 };
 
+void assert_eq(float *value, float *expected, uint m, uint n) {
+    for (uint i=0; i<m*n; i++) {
+        if (value[i] != expected[i]) {
+            printf("\x1B[31mError:\033[0m Value: %f is not equal to expected: %f at %d\n", value[i], expected[i], i);
+            exit(EXIT_FAILURE);
+        }
+    }
+}
+
 int main() {
     matmul::hello<<<1, 1>>>();
 
     const uint M = 4096;
     const uint N = 4096;
     const uint K = 4096;
+
+    uint BM = 32;
+    uint BN = 32;
+
+    uint TM = 8;
+    uint TN = 8;
 
     float *host_matrix_a, *host_matrix_b, *host_matrix_c;
 
@@ -55,13 +70,16 @@ int main() {
     cudaCheck(cudaMemcpy(device_matrix_c, host_matrix_c, sizeof(float) * M * N, cudaMemcpyHostToDevice));
     cudaCheck(cudaDeviceSynchronize());
 
+    // Use naive implementation as a simple check for now
+    float *host_expected, *device_expected;
+    host_expected = (float *)malloc(sizeof(float) * M * N);
+    cudaCheck(cudaMalloc((void **)&device_expected, sizeof(float) * M * N));
 
+    dim3 block_size(BM, BN, 1);
+    dim3 grid_size(M / BM, N / BN, 1);
+    matmul::naive<<<grid_size, block_size>>>(device_matrix_a, device_matrix_b, device_expected);
+    cudaCheck(cudaMemcpy(host_expected, device_expected, sizeof(float) * M * N, cudaMemcpyDeviceToHost));
 
-
-    // warm up
-//    matmul::naive<<<grid_size, block_size>>>(device_matrix_a, device_matrix_b, device_matrix_c);
-//    matmul::naive<<<grid_size, block_size>>>(device_matrix_a, device_matrix_b, device_matrix_c);
-//    matmul::cache_blocking<<<grid_size, block_size>>>(device_matrix_a, device_matrix_b, device_matrix_c);
     cudaCheck(cudaDeviceSynchronize());
 
     float elapsed_time;
@@ -71,22 +89,17 @@ int main() {
 
     cudaCheck(cudaEventRecord(beg));
     uint repeats = 1;
-    uint BM = 32;
-    uint BN = 32;
-    uint TM = 8;
-    uint TN = 8;
-
     for (uint i = 0; i < repeats; i++) {
-//        dim3 block_size(BM, BN, 1);
-//        dim3 grid_size(M / BM, N / BN, 1);
+//        block_size = dim3(BM, BN, 1);
+//        grid_size = dim3(M / BM, N / BN, 1);
 //        matmul::naive<<<grid_size, block_size>>>(device_matrix_a, device_matrix_b, device_matrix_c);
 
-//        dim3 block_size(BM, BN, 1);
-//        dim3 grid_size(M / BM, N / BN, 1);
+//        block_size = dim3(BM, BN, 1);
+//        grid_size = dim3(M / BM, N / BN, 1);
 //        matmul::cache_blocking<<<grid_size, block_size>>>(device_matrix_a, device_matrix_b, device_matrix_c);
 
-        dim3 block_size(BM / TM, BN / TN, 1);
-        dim3 grid_size(M / BM, N / BN, 1);
+        block_size = dim3(BM / TM, BN / TN, 1);
+        grid_size = dim3(M / BM, N / BN, 1);
         matmul::tiling<<<grid_size, block_size>>>(device_matrix_a, device_matrix_b, device_matrix_c);
     }
     cudaCheck(cudaEventRecord(end));
@@ -102,6 +115,8 @@ int main() {
     cudaCheck(cudaMemcpy(host_matrix_a, device_matrix_a, sizeof(float) * K * N, cudaMemcpyDeviceToHost));
     cudaCheck(cudaMemcpy(host_matrix_c, device_matrix_c, sizeof(float) * M * N, cudaMemcpyDeviceToHost));
     cudaCheck(cudaDeviceSynchronize());
+
+    assert_eq(host_matrix_c, host_expected, M, N);
 
     free(host_matrix_a);
     free(host_matrix_b);

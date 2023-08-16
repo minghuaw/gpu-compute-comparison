@@ -11,3 +11,10 @@ pub (crate) mod cache_blocking {
         path: "./shaders/matmul/cache_blocking.comp"
     }
 }
+
+pub(crate) mod tiling {
+    vulkano_shaders::shader! {
+        ty: "compute",
+        path: "./shaders/matmul/tiling.comp"
+    }
+}

@@ -1,6 +1,13 @@
 #version 460
 
-layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
+const uint M = 4096;
+const uint N = 4096;
+const uint K = 4096;
+const uint BM = 32;
+const uint BN = 32;
+const uint BK = 32;
+
+layout(local_size_x = BM / 1, local_size_y = BN, local_size_z = 1) in;
 
 layout(set = 0, binding = 0) buffer readonly MatrixA {
     float matrix_a[];
@@ -13,13 +20,6 @@ layout(set = 0, binding = 1) buffer readonly MatrixB {
 layout(set = 0, binding = 2) buffer writeonly MatrixC {
     float matrix_c[];
 };
-
-const uint M = 4096;
-const uint N = 4096;
-const uint K = 4096;
-const uint BM = 32;
-const uint BN = 32;
-const uint BK = 32;
 
 shared float shared_a[BM * BK];
 shared float shared_b[BK * BN];

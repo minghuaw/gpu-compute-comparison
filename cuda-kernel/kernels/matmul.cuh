@@ -76,8 +76,6 @@ namespace matmul {
         const uint TM = 8;
         const uint TN = 8;
 
-        float alpha = 1.0;
-
         __shared__ float shared_a[BM * BK];
         __shared__ float shared_b[BK * BN];
 
