@@ -23,6 +23,7 @@ void generate_zero_matrix(float *matrix, uint rows, uint cols) {
 
 void cudaCheck(cudaError_t error) {
     if (error != cudaSuccess) {
+        printf("%s", cudaGetErrorString(error));
         exit(EXIT_FAILURE);
     }
 };
@@ -54,10 +55,8 @@ int main() {
     cudaCheck(cudaMemcpy(device_matrix_c, host_matrix_c, sizeof(float) * M * N, cudaMemcpyHostToDevice));
     cudaCheck(cudaDeviceSynchronize());
 
-    uint BM = 32;
-    uint BN = 32;
-    dim3 block_size(BM, BN, 1);
-    dim3 grid_size(M / BM, N / BN, 1);
+
+
 
     // warm up
 //    matmul::naive<<<grid_size, block_size>>>(device_matrix_a, device_matrix_b, device_matrix_c);
@@ -72,9 +71,22 @@ int main() {
 
     cudaCheck(cudaEventRecord(beg));
     uint repeats = 1;
+    uint BM = 32;
+    uint BN = 32;
+    uint TM = 8;
+    uint TN = 8;
+
     for (uint i = 0; i < repeats; i++) {
+//        dim3 block_size(BM, BN, 1);
+//        dim3 grid_size(M / BM, N / BN, 1);
 //        matmul::naive<<<grid_size, block_size>>>(device_matrix_a, device_matrix_b, device_matrix_c);
+
+//        dim3 block_size(BM, BN, 1);
+//        dim3 grid_size(M / BM, N / BN, 1);
 //        matmul::cache_blocking<<<grid_size, block_size>>>(device_matrix_a, device_matrix_b, device_matrix_c);
+
+        dim3 block_size(BM / TM, BN / TN, 1);
+        dim3 grid_size(M / BM, N / BN, 1);
         matmul::tiling<<<grid_size, block_size>>>(device_matrix_a, device_matrix_b, device_matrix_c);
     }
     cudaCheck(cudaEventRecord(end));
