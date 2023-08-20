@@ -7,7 +7,10 @@ set(CMAKE_CUDA_STANDARD 11)
 
 add_executable(cuda_kernel main.cu
         kernels/matmul.cuh
+        kernels/ported_matmul.cuh
+        kernels/config.h
 )
 
 set_target_properties(cuda_kernel PROPERTIES
         CUDA_SEPARABLE_COMPILATION ON)
+target_link_libraries(cuda_kernel -lcublas)

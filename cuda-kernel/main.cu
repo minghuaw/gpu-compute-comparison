@@ -3,6 +3,26 @@
 #include <chrono>
 
 #include "kernels/matmul.cuh"
+#include "kernels/ported_matmul.cuh"
+#include "kernels/config.h"
+
+#include "cuda_runtime.h"
+#include "cublas_v2.h"
+
+void cublas_sgemm(float *device_matrix_a, float *device_matrix_b, float *device_matrix_c) {
+    using namespace config;
+
+    cublasHandle_t handle;
+    if (cublasCreate(&handle)) {
+        printf("Create cublas handle error.\n");
+        exit(EXIT_FAILURE);
+    };
+
+    //cublas列主序计算：https://www.cnblogs.com/cuancuancuanhao/p/7763256.html
+    cublasSgemm(handle,
+                CUBLAS_OP_N, CUBLAS_OP_N,N, M, K, &alpha, device_matrix_b, N, device_matrix_a, K, &beta, device_matrix_c, N);
+    cublasDestroy(handle);
+}
 
 /// Generate a contiguous random matrix in row major order
 void generate_random_matrix(float *matrix, uint rows, uint cols) {
@@ -38,17 +58,7 @@ void assert_eq(float *value, float *expected, uint m, uint n) {
 }
 
 int main() {
-    matmul::hello<<<1, 1>>>();
-
-    const uint M = 4096;
-    const uint N = 4096;
-    const uint K = 4096;
-
-    uint BM = 32;
-    uint BN = 32;
-
-    uint TM = 8;
-    uint TN = 8;
+    using namespace config;
 
     float *host_matrix_a, *host_matrix_b, *host_matrix_c;
 
@@ -75,10 +85,16 @@ int main() {
     host_expected = (float *)malloc(sizeof(float) * M * N);
     cudaCheck(cudaMalloc((void **)&device_expected, sizeof(float) * M * N));
 
+//    dim3 block_size(BM, BN, 1);
+//    dim3 grid_size(M / BM, N / BN, 1);
+//    matmul::naive<<<grid_size, block_size>>>(device_matrix_a, device_matrix_b, device_expected);
+
     dim3 block_size(BM, BN, 1);
     dim3 grid_size(M / BM, N / BN, 1);
-    matmul::naive<<<grid_size, block_size>>>(device_matrix_a, device_matrix_b, device_expected);
+    ported_matmul::naive<<<grid_size, block_size>>>(device_matrix_a, device_matrix_b, device_expected);
+
     cudaCheck(cudaMemcpy(host_expected, device_expected, sizeof(float) * M * N, cudaMemcpyDeviceToHost));
+    printf("%f\n", host_expected[0]);
 
     cudaCheck(cudaDeviceSynchronize());
 
@@ -90,6 +106,28 @@ int main() {
     cudaCheck(cudaEventRecord(beg));
     uint repeats = 1;
     for (uint i = 0; i < repeats; i++) {
+//        cublas_sgemm(device_matrix_a, device_matrix_b, device_matrix_c);
+
+//        block_size = dim3(BM, BN, 1);
+//        grid_size = dim3(M / BM, N / BN, 1);
+//        ported_matmul::naive<<<grid_size, block_size>>>(device_matrix_a, device_matrix_b, device_matrix_c);
+
+//        block_size = dim3(BM * BN, 1, 1);
+//        grid_size = dim3(M / BM, N / BN, 1);
+//        ported_matmul::mem_coalescing<<<grid_size, block_size>>>(device_matrix_a, device_matrix_b, device_matrix_c);
+
+//        block_size = dim3(BM * BN, 1, 1);
+//        grid_size = dim3(M / BM, N / BN, 1);
+//        ported_matmul::shaded_mem_block<<<grid_size, block_size>>>(device_matrix_a, device_matrix_b, device_matrix_c);
+
+//        block_size = dim3((BM * BN) / TM, 1, 1);
+//        grid_size = dim3(N / BN, M / BM, 1);
+//        ported_matmul::block_tiling_1d<<<grid_size, block_size>>>(device_matrix_a, device_matrix_b, device_matrix_c);
+
+//        block_size = dim3((BM * BN) / (TM * TN));
+//        grid_size = dim3(N / BN, M / BM);
+//        ported_matmul::block_tiling_2d<<<grid_size, block_size>>>(device_matrix_a, device_matrix_b, device_matrix_c);
+
 //        block_size = dim3(BM, BN, 1);
 //        grid_size = dim3(M / BM, N / BN, 1);
 //        matmul::naive<<<grid_size, block_size>>>(device_matrix_a, device_matrix_b, device_matrix_c);
@@ -98,9 +136,9 @@ int main() {
 //        grid_size = dim3(M / BM, N / BN, 1);
 //        matmul::cache_blocking<<<grid_size, block_size>>>(device_matrix_a, device_matrix_b, device_matrix_c);
 
-        block_size = dim3(BM / TM, BN / TN, 1);
-        grid_size = dim3(M / BM, N / BN, 1);
-        matmul::tiling<<<grid_size, block_size>>>(device_matrix_a, device_matrix_b, device_matrix_c);
+//        block_size = dim3(BM / TM, BN / TN, 1);
+//        grid_size = dim3(M / BM, N / BN, 1);
+//        matmul::tiling<<<grid_size, block_size>>>(device_matrix_a, device_matrix_b, device_matrix_c);
     }
     cudaCheck(cudaEventRecord(end));
 
