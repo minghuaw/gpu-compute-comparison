@@ -5,7 +5,11 @@
 #ifndef CUDA_KERNEL_MATMUL_CUH
 #define CUDA_KERNEL_MATMUL_CUH
 
+#include "common.h"
+
 namespace matmul {
+    using namespace common;
+
     __global__ void hello() {
         uint col = blockIdx.x * blockDim.x + threadIdx.x;
         uint row = blockIdx.y * blockDim.y + threadIdx.y;
@@ -13,10 +17,6 @@ namespace matmul {
     }
 
     __global__ void naive(const float *matrix_a, const float *matrix_b, float *matrix_c) {
-        const uint M = 4096;
-        const uint N = 4096;
-        const uint K = 4096;
-
         uint col = blockIdx.x * blockDim.x + threadIdx.x;
         uint row = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -24,19 +24,11 @@ namespace matmul {
         for (int k = 0; k < K; k++) {
             sum += matrix_a[row * K + k] * matrix_b[k * N + col];
         }
-        matrix_c[row * N + col] = sum;
+        matrix_c[row * N + col] = alpha * sum + beta * matrix_c[row * N + col];
     }
 
     __global__ void cache_blocking(const float *matrix_a, const float *matrix_b, float *matrix_c) {
-        const uint M = 4096;
-        const uint N = 4096;
-        const uint K = 4096;
-
         // TODO: This can be passed in as a kernel argument
-        const uint BM = 32;
-        const uint BN = 32;
-        const uint BK = 32;
-
         __shared__ float shared_a[BM * BK];
         __shared__ float shared_b[BK * BN];
 
@@ -60,22 +52,11 @@ namespace matmul {
             }
             __syncthreads();
         }
-        matrix_c[global_c_offset + local_y * N + local_x] = sum;
+        matrix_c[global_c_offset + local_y * N + local_x] = alpha * sum + beta * matrix_c[global_c_offset + local_y * N + local_x];
     }
 
     /// 2D block tiling matrix multiplication kernel
     __global__ void tiling(const float *matrix_a, const float *matrix_b, float *matrix_c) {
-        const uint M = 4096;
-        const uint N = 4096;
-        const uint K = 4096;
-
-        const uint BM = 32;
-        const uint BN = 32;
-        const uint BK = 32;
-
-        const uint TM = 8;
-        const uint TN = 8;
-
         __shared__ float shared_a[BM * BK];
         __shared__ float shared_b[BK * BN];
 

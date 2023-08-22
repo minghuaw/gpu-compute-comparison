@@ -2,19 +2,16 @@
 #include <random>
 #include <chrono>
 
+#include "kernels/common.h"
 #include "kernels/matmul.cuh"
+#include "kernels/ported.cuh"
 
 #include "cuda_runtime.h"
 #include "cublas_v2.h"
 
+using namespace common;
+
 void cublas_matmul(float *device_matrix_a, float *device_matrix_b, float *device_matrix_c) {
-    const uint M = 4096;
-    const uint N = 4096;
-    const uint K = 4096;
-
-    const float alpha = 1.0;
-    const float beta = 1.0;
-
     cublasHandle_t handle;
     if (cublasCreate(&handle)) {
         printf("Create cublas handle error.\n");
@@ -64,16 +61,6 @@ void assert_eq(float *value, float *expected, uint m, uint n) {
 int main() {
     matmul::hello<<<1, 1>>>();
 
-    const uint M = 4096;
-    const uint N = 4096;
-    const uint K = 4096;
-
-    uint BM = 32;
-    uint BN = 32;
-
-    uint TM = 8;
-    uint TN = 8;
-
     float *host_matrix_a, *host_matrix_b, *host_matrix_c;
 
     host_matrix_a = (float *)malloc(sizeof(float) * M * K);
@@ -120,9 +107,13 @@ int main() {
 //        grid_size = dim3(M / BM, N / BN, 1);
 //        matmul::naive<<<grid_size, block_size>>>(device_matrix_a, device_matrix_b, device_matrix_c);
 
-        block_size = dim3(BM, BN, 1);
+//        block_size = dim3(BM, BN, 1);
+//        grid_size = dim3(M / BM, N / BN, 1);
+//        matmul::cache_blocking<<<grid_size, block_size>>>(device_matrix_a, device_matrix_b, device_matrix_c);
+
+        block_size = dim3(BM * BN / TM, 1, 1);
         grid_size = dim3(M / BM, N / BN, 1);
-        matmul::cache_blocking<<<grid_size, block_size>>>(device_matrix_a, device_matrix_b, device_matrix_c);
+        ported::block_tiling_1d<<<grid_size, block_size>>>(device_matrix_a, device_matrix_b, device_matrix_c);
 
 //        block_size = dim3(BM / TM, BN / TN, 1);
 //        grid_size = dim3(M / BM, N / BN, 1);

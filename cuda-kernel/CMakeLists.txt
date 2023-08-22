@@ -7,6 +7,8 @@ set(CMAKE_CUDA_STANDARD 11)
 
 add_executable(cuda_kernel main.cu
         kernels/matmul.cuh
+        kernels/common.h
+        kernels/ported.cuh
 )
 
 set_target_properties(cuda_kernel PROPERTIES
