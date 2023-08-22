@@ -4,6 +4,10 @@ use wgpu::{Backends, util::{DeviceExt, BufferInitDescriptor}, BufferUsages, Comp
 
 mod kernels;
 
+fn main() {
+    pollster::block_on(run());
+}
+
 async fn run() {
     let instance = wgpu::Instance::default();
     let adapter = instance
@@ -58,7 +62,8 @@ async fn run() {
     });
 
     // let shader = kernels::matmul::naive::load(&device);
-    let shader = kernels::matmul::cache_blocking::load(&device);
+    // let shader = kernels::matmul::cache_blocking::load(&device);
+    let shader = kernels::matmul::block_tiling_1d::load(&device);
     let compute_pipeline = device.create_compute_pipeline(&ComputePipelineDescriptor {
         label: None,
         layout: None,
@@ -106,8 +111,4 @@ async fn run() {
     device.poll(Maintain::Wait);
     let elapsed = start.elapsed();
     println!("Elapsed: {:?}", elapsed);
-}
-
-fn main() {
-    pollster::block_on(run());
 }

@@ -2,3 +2,8 @@
 **/build
 **/cmake-build-debug
 **/.idea
+
+# Visual Studio related files
+**/.vs
+**/x64
+*.user

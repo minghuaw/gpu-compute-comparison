@@ -5,20 +5,27 @@
 #ifndef CUDA_KERNEL_MATMUL_CUH
 #define CUDA_KERNEL_MATMUL_CUH
 
-#include "common.h"
-
 namespace matmul {
-    using namespace common;
-
     __global__ void hello() {
-        uint col = blockIdx.x * blockDim.x + threadIdx.x;
-        uint row = blockIdx.y * blockDim.y + threadIdx.y;
+        unsigned int col = blockIdx.x * blockDim.x + threadIdx.x;
+        unsigned int row = blockIdx.y * blockDim.y + threadIdx.y;
         printf("row: %d, col: %d\n", row, col);
     }
 
-    __global__ void naive(const float *matrix_a, const float *matrix_b, float *matrix_c) {
-        uint col = blockIdx.x * blockDim.x + threadIdx.x;
-        uint row = blockIdx.y * blockDim.y + threadIdx.y;
+    template<
+            const unsigned int M,
+            const unsigned int N, 
+            const unsigned int K
+    >
+    __global__ void naive(
+            const float alpha,
+            const float *matrix_a,
+            const float *matrix_b,
+            const float beta,
+            float *matrix_c
+    ) {
+        unsigned int col = blockIdx.x * blockDim.x + threadIdx.x;
+        unsigned int row = blockIdx.y * blockDim.y + threadIdx.y;
 
         float sum = 0.;
         for (int k = 0; k < K; k++) {
@@ -27,159 +34,115 @@ namespace matmul {
         matrix_c[row * N + col] = alpha * sum + beta * matrix_c[row * N + col];
     }
 
-    __global__ void cache_blocking(const float *matrix_a, const float *matrix_b, float *matrix_c) {
+    template<
+            const unsigned int M,
+            const unsigned int N,
+            const unsigned int K,
+            const unsigned int BM,
+            const unsigned int BN,
+            const unsigned int BK
+    >
+    __global__ void cache_blocking(
+            const float alpha,
+            const float *matrix_a,
+            const float *matrix_b,
+            const float beta,
+            float *matrix_c
+    ) {
         // TODO: This can be passed in as a kernel argument
         __shared__ float shared_a[BM * BK];
         __shared__ float shared_b[BK * BN];
 
-        uint global_a_offset = blockIdx.y * BM * K;
-        uint global_b_offset = blockIdx.x * BN;
-        uint global_c_offset = blockIdx.y * BM * N + blockIdx.x * BN;
+        unsigned int global_a_offset = blockIdx.y * BM * K;
+        unsigned int global_b_offset = blockIdx.x * BN;
+        unsigned int global_c_offset = blockIdx.y * BM * N + blockIdx.x * BN;
 
-        uint thread_index = threadIdx.y * blockDim.x + threadIdx.x;
-        uint local_x = thread_index % BN;
-        uint local_y = thread_index / BN;
+        unsigned int thread_index = threadIdx.y * blockDim.x + threadIdx.x;
+        unsigned int local_x = thread_index % BN;
+        unsigned int local_y = thread_index / BN;
 
         float sum = 0.0;
-        for (uint k = 0; k < K; k += BK) {
+        for (unsigned int k = 0; k < K; k += BK) {
             shared_a[local_y * BK + local_x] = matrix_a[global_a_offset + local_y * K + k + local_x];
             shared_b[local_y * BN + local_x] = matrix_b[global_b_offset + (local_y + k) * N + local_x];
 
             __syncthreads();
 
-            for (uint i = 0; i < BK; i++) {
+            for (unsigned int i = 0; i < BK; i++) {
                 sum += shared_a[local_y * BK + i] * shared_b[i * BN + local_x];
             }
             __syncthreads();
         }
-        matrix_c[global_c_offset + local_y * N + local_x] = alpha * sum + beta * matrix_c[global_c_offset + local_y * N + local_x];
+        matrix_c[global_c_offset + local_y * N + local_x] =
+                alpha * sum + beta * matrix_c[global_c_offset + local_y * N + local_x];
     }
 
-    __global__ void block_tiling_1d(const float *matrix_a, const float *matrix_b, float *matrix_c) {
+    template<
+            const unsigned int M,
+            const unsigned int N,
+            const unsigned int K,
+            const unsigned int BM,
+            const unsigned int BN,
+            const unsigned int BK,
+            const unsigned int TM
+    >
+    __global__ void block_tiling_1d(
+            const float alpha,
+            const float *matrix_a,
+            const float *matrix_b,
+            const float beta,
+            float *matrix_c
+    ) {
         __shared__ float shared_a[BM * BK];
         __shared__ float shared_b[BK * BN];
 
-        uint thread_index = threadIdx.y * blockDim.x + threadIdx.x;
+        unsigned int thread_index = threadIdx.y * blockDim.x + threadIdx.x;
 
-        uint thread_num = BM * BN / TM;
+        unsigned int thread_num = BM * BN / TM;
 
-        uint tx = thread_index % BN;
-        uint ty = thread_index / BN * TM;
+        unsigned int tx = thread_index % BN;
+        unsigned int ty = thread_index / BN * TM;
 
-        uint a_global_offset = blockIdx.y * BM * K;
-        uint b_global_offset = blockIdx.x * BN;
-        const uint c_global_offset = blockIdx.y * BM * N + blockIdx.x * BN;
+        unsigned int a_global_offset = blockIdx.y * BM * K;
+        unsigned int b_global_offset = blockIdx.x * BN;
+        const unsigned int c_global_offset = blockIdx.y * BM * N + blockIdx.x * BN;
 
-        uint a_tile_row = thread_index / BK;
-        uint a_tile_col = thread_index % BK;
-        uint a_tile_stride = thread_num / BK;
+        unsigned int a_tile_row = thread_index / BK;
+        unsigned int a_tile_col = thread_index % BK;
+        unsigned int a_tile_stride = thread_num / BK;
 
-        uint b_tile_row = thread_index / BN;
-        uint b_tile_col = thread_index % BN;
-        uint b_tile_stride = thread_num / BN;
+        unsigned int b_tile_row = thread_index / BN;
+        unsigned int b_tile_col = thread_index % BN;
+        unsigned int b_tile_stride = thread_num / BN;
 
         // Must be explicitly set to 0.0
         float c_tile[TM] = {0.0};
         float b_cache = 0.0;
-        for (uint k=0; k < K; k += BK) {
-            for (uint i=0; i<BM; i += a_tile_stride) {
-                shared_a[(a_tile_row + i) * BK + a_tile_col] = matrix_a[a_global_offset + (a_tile_row + i) * K + a_tile_col];
+        for (unsigned int k = 0; k < K; k += BK) {
+            for (unsigned int i = 0; i < BM; i += a_tile_stride) {
+                shared_a[(a_tile_row + i) * BK + a_tile_col] = matrix_a[a_global_offset + (a_tile_row + i) * K +
+                                                                        a_tile_col];
             }
-            for (uint i=0; i<BK; i += b_tile_stride) {
-                shared_b[(b_tile_row + i) * BN + b_tile_col] = matrix_b[b_global_offset + (b_tile_row + i) * N + b_tile_col];
+            for (unsigned int i = 0; i < BK; i += b_tile_stride) {
+                shared_b[(b_tile_row + i) * BN + b_tile_col] = matrix_b[b_global_offset + (b_tile_row + i) * N +
+                                                                        b_tile_col];
             }
 
             __syncthreads();
             a_global_offset += BK;
             b_global_offset += BK * N;
 
-            for (uint i=0; i<BK; i++) {
+            for (unsigned int i = 0; i < BK; i++) {
                 b_cache = shared_b[tx + i * BN];
-                for (uint j=0; j<TM; j++) {
+                for (unsigned int j = 0; j < TM; j++) {
                     c_tile[j] += shared_a[(ty + j) * BK + i] * b_cache;
                 }
             }
             __syncthreads();
         }
-        for (uint j=0; j<TM; j++) {
-            matrix_c[c_global_offset + (ty + j) * N + tx] = alpha * c_tile[j] + beta * matrix_c[c_global_offset + (ty + j) * N + tx];
-        }
-    }
-
-    /// 2D block tiling matrix multiplication kernel
-    __global__ void tiling(const float *matrix_a, const float *matrix_b, float *matrix_c) {
-        __shared__ float shared_a[BM * BK];
-        __shared__ float shared_b[BK * BN];
-
-        uint num_threads_per_block = (BM * BN) / (TM * TN);
-
-        uint thread_index = threadIdx.y * blockDim.x + threadIdx.x;
-        uint thread_x = thread_index / (BN / TN);
-        uint thread_y = thread_index % (BN / TN);
-
-        float tile_a[TM];
-        float tile_b[TN];
-        float tile_c[TM * TN];
-
-        for (uint global_k=0; global_k<BK; global_k+=BK) {
-            for (uint i=0; i<BM*BK; i+=num_threads_per_block) {
-                uint block_index = i + thread_index;
-                if (block_index < BM*BK) {
-                    uint block_i = block_index / BK;
-                    uint block_j = block_index % BK;
-                    uint global_i = blockIdx.x * BM + block_i;
-                    uint global_j = global_k + block_j;
-                    if (global_i < M && global_j < K) {
-                        shared_a[block_index] = matrix_a[global_i * K + global_j];
-                    } else {
-                        shared_a[block_index] = 0;
-                    }
-                }
-            }
-            for (uint i=0; i<BK*BN; i+=num_threads_per_block) {
-                uint block_index = i + thread_index;
-                if (block_index < BK * BN) {
-                    uint block_i = block_index / BN;
-                    uint block_j = block_index % BN;
-                    uint global_i = global_k + block_i;
-                    uint global_j = blockIdx.y * BN + block_j;
-                    if (global_i < K && global_j < N) {
-                        shared_b[block_index] = matrix_b[global_i * N + global_j];
-                    } else {
-                        shared_b[block_index] = 0;
-                    }
-                }
-            }
-            __syncthreads();
-
-            for (uint block_k=0; block_k<BK; block_k++) {
-                for (uint tile_i=0; tile_i<TM; tile_i++) {
-                    tile_a[tile_i] = shared_a[(thread_x*TM + tile_i) * BK + block_k];
-                }
-                for (uint tile_j=0; tile_j<TN; tile_j++) {
-                    tile_b[tile_j] = shared_b[block_k * BN + (thread_y * TN + tile_j)];
-                }
-
-                for (uint tile_i=0; tile_i < TM; tile_i++) {
-                    for (uint tile_j=0;  tile_j<TN; tile_j++) {
-                        tile_c[tile_i * TM + tile_j] += tile_a[tile_i] * tile_b[tile_j];
-                    }
-                }
-            }
-            __syncthreads();
-        }
-
-        for (uint tile_i=0; tile_i<TM; tile_i++) {
-            for (uint tile_j=0; tile_j<TN; tile_j++) {
-                uint block_i = thread_x * TM + tile_i;
-                uint block_j = thread_y * TN + tile_j;
-                uint global_c_offset = blockIdx.x * BM * N + blockIdx.y * BN;
-                uint global_c_index = global_c_offset + block_i * N + block_j;
-                uint tile_c_index = tile_i * TM + tile_j;
-                if (global_c_index < M*N && tile_c_index < TM*TN) {
-                    matrix_c[global_c_index] = tile_c[tile_c_index];
-                }
-            }
+        for (unsigned int j = 0; j < TM; j++) {
+            matrix_c[c_global_offset + (ty + j) * N + tx] =
+                    alpha * c_tile[j] + beta * matrix_c[c_global_offset + (ty + j) * N + tx];
         }
     }
 }

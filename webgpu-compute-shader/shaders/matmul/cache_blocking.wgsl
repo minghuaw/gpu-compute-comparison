@@ -13,9 +13,9 @@ var<storage, read_write> matrix_c: array<f32>;
 const M: u32 = 4096u;
 const N: u32 = 4096u;
 const K: u32 = 4096u;
-const BM: u32 = 8u;
-const BN: u32 = 8u;
-const BK: u32 = 8u;
+const BM: u32 = 32u;
+const BN: u32 = 32u;
+const BK: u32 = 32u;
 
 var<workgroup> shared_a: array<f32, 64>;
 var<workgroup> shared_b: array<f32, 64>;
