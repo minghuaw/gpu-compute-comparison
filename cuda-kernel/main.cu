@@ -111,9 +111,9 @@ int main() {
 //        grid_size = dim3(M / BM, N / BN, 1);
 //        matmul::cache_blocking<<<grid_size, block_size>>>(device_matrix_a, device_matrix_b, device_matrix_c);
 
-        block_size = dim3(BM * BN / TM, 1, 1);
+        block_size = dim3(BM / TM, BN, 1);
         grid_size = dim3(M / BM, N / BN, 1);
-        ported::block_tiling_1d<<<grid_size, block_size>>>(device_matrix_a, device_matrix_b, device_matrix_c);
+        matmul::block_tiling_1d<<<grid_size, block_size>>>(device_matrix_a, device_matrix_b, device_matrix_c);
 
 //        block_size = dim3(BM / TM, BN / TN, 1);
 //        grid_size = dim3(M / BM, N / BN, 1);
