@@ -1,0 +1,81 @@
+#version 460
+
+const uint M = 4096;
+const uint N = 4096;
+const uint K = 4096;
+
+const uint BM = 32;
+const uint BN = 32;
+const uint BK = 32;
+
+const uint TM = 8;
+
+const float alpha = 1.0;
+const float beta = 1.0;
+
+layout(local_size_x = BM / TM, local_size_y = BN, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) buffer readonly MatrixA {
+    float a_global[];
+};
+
+layout(set = 0, binding = 1) buffer readonly MatrixB {
+    float b_global[];
+};
+
+layout(set = 0, binding = 2) buffer MatrixC {
+    float c_global[];
+};
+
+shared float a_shared[BM * BK];
+shared float b_shared[BK * BN];
+
+void main() {
+    uint thread_index = gl_LocalInvocationIndex;
+    uint thread_num = BM * BN / TM;
+
+    uint tx =  thread_index % BN;
+    uint ty = thread_index / BN * TM;
+
+    uint a_global_offset = gl_WorkGroupID.y * BM * K;
+    uint b_global_offset = gl_WorkGroupID.x * BN;
+    const uint c_global_offset = gl_WorkGroupID.y * BM * N + gl_WorkGroupID.x * BN;
+
+    uint a_tile_row = thread_index / BK;
+    uint a_tile_col = thread_index % BK;
+    uint a_tile_stride = thread_num / BK;
+
+    uint b_tile_row = thread_index / BN;
+    uint b_tile_col = thread_index % BN;
+    uint b_tile_stride = thread_num / BN;
+
+    // Explicitly initialize to zero. TODO: test if this is necessary
+    float c_tile[TM];
+    for (uint i = 0; i < TM; i++) {
+        c_tile[i] = 0.0;
+    }
+    float b_cache = 0.0;
+
+    for (uint k = 0; k < K; k += BK) {
+        for (uint i = 0; i < BM; i += a_tile_stride) {
+            a_shared[(a_tile_row + i) * BK + a_tile_col] = a_global[a_global_offset + (a_tile_row + i) * K + k + a_tile_col];
+        }
+        for (uint i = 0; i < BK; i += b_tile_stride) {
+            b_shared[(b_tile_row + i) * BN + b_tile_col] = b_global[b_global_offset + (b_tile_row + i) * N + k + b_tile_col];
+        }
+        barrier();
+        a_global_offset += BK;
+        b_global_offset += BK * N;
+
+        for (uint i = 0; i < BK; i++) {
+            b_cache = b_shared[tx + i * BN];
+            for (uint j = 0; j < TM; j++) {
+                c_tile[j] += a_shared[(ty + j) * BK + i] * b_cache;
+            }
+        }
+        barrier();
+    }
+    for (uint j = 0; j < TM; j++) {
+        c_global[c_global_offset + (ty + j) * N + tx] = alpha * c_tile[j] + beta * c_global[c_global_offset + (ty + j) * N + tx];
+    }
+}

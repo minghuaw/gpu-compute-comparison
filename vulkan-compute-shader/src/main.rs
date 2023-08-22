@@ -1,8 +1,8 @@
-use ndarray::{ArrayBase, OwnedRepr};
+use ndarray::{ArrayBase, OwnedRepr, linalg::general_mat_mul, Dim};
 use ndarray_rand::RandomExt;
 use rand::distributions::Uniform;
 use vulkano::{
-    buffer::{Buffer, BufferCreateInfo, BufferUsage},
+    buffer::{Buffer, BufferCreateInfo, BufferUsage, Subbuffer},
     command_buffer::{
         allocator::{StandardCommandBufferAllocator, StandardCommandBufferAllocatorCreateInfo},
         AutoCommandBufferBuilder, CommandBufferUsage,
@@ -17,6 +17,8 @@ use vulkano::{
     sync::{self, GpuFuture},
     VulkanLibrary,
 };
+
+extern crate openblas_src;
 
 mod kernels;
 
@@ -80,7 +82,11 @@ fn main() {
     const BN: usize = 32;
 
     let matrix_a: ArrayBase<OwnedRepr<f32>, _> =
-        ArrayBase::random((M, K), Uniform::new(-1.0, 1.0));
+        ArrayBase::random((M, K), Uniform::new(-1.0, 1.0));    
+    let matrix_b: ArrayBase<OwnedRepr<f32>, _> =
+        ArrayBase::random((K, N), Uniform::new(-1.0, 1.0));
+    let matrix_c: ArrayBase<OwnedRepr<f32>, _> = ArrayBase::zeros((M, N));
+
     let matrix_a_buf = Buffer::from_iter(
         &memory_allocator,
         BufferCreateInfo {
@@ -91,12 +97,9 @@ fn main() {
             usage: MemoryUsage::Upload,
             ..Default::default()
         },
-        matrix_a,
+        matrix_a.clone(),
     )
     .expect("failed to create buffer");
-
-    let matrix_b: ArrayBase<OwnedRepr<f32>, _> =
-        ArrayBase::random((K, N), Uniform::new(-1.0, 1.0));
     let matrix_b_buf = Buffer::from_iter(
         &memory_allocator,
         BufferCreateInfo {
@@ -107,11 +110,9 @@ fn main() {
             usage: MemoryUsage::Upload,
             ..Default::default()
         },
-        matrix_b,
+        matrix_b.clone(),
     )
     .expect("failed to create buffer");
-
-    let matrix_c: ArrayBase<OwnedRepr<f32>, _> = ArrayBase::zeros((M, N));
     let matrix_c_buf = Buffer::from_iter(
         &memory_allocator,
         BufferCreateInfo {
@@ -126,12 +127,14 @@ fn main() {
     )
     .expect("failed to create buffer");
 
-    let shader =
-        kernels::matmul::naive::load(device.clone()).expect("failed to create shader module");
+    // let shader =
+    //     kernels::matmul::naive::load(device.clone()).expect("failed to create shader module");
     // let shader = kernels::matmul::cache_blocking::load(device.clone())
     //     .expect("failed to create shader module");
     // let shader = kernels::matmul::tiling::load(device.clone())
     //     .expect("failed to create shader module");
+    let shader = kernels::matmul::block_tiling_1d::load(device.clone())
+        .expect("failed to create shader module");
     let compute_pipeline = ComputePipeline::new(
         device.clone(),
         shader.entry_point("main").unwrap(),
@@ -197,9 +200,31 @@ fn main() {
         .unwrap();
     future.wait(None).unwrap();
     let elapsed = start.elapsed();
-    println!("Elapsed: {:?}", elapsed);
+    println!("vulkan elapsed: {:?}", elapsed);
+    
+    let start = std::time::Instant::now();
+    let mut expected: ArrayBase<OwnedRepr<f32>, _> = ArrayBase::zeros((M, N));
+    general_mat_mul(1.0, &matrix_a, &matrix_b, 1.0, &mut expected);
+    let elapsed = start.elapsed();
+    println!("openblas elapsed: {:?}", elapsed);
 
+    let is_equal = is_equal::<M, N>(matrix_c_buf, expected);
+    println!("is_equal: {}", is_equal);
     // let content = matrix_c_buf.read().unwrap();
     // println!("Element: {}", content[M * N - 1]);
     // println!("Everything succeeded!");
+    
+}
+
+fn is_equal<const M: usize, const N: usize>(value: Subbuffer<[f32]>, expected: ArrayBase<OwnedRepr<f32>, Dim<[usize; 2]>>) -> bool {
+    let guard = value.read().unwrap();
+    let slice = expected.as_slice().unwrap();
+    let total = M * N;
+    for i in 0..total {
+        if f32::abs(guard[i] - slice[i]) > 1e-2 {
+            println!("{}: {} != {}", i, guard[i], slice[i]);
+            return false;
+        }
+    }
+    true
 }
