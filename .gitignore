@@ -6,4 +6,6 @@
 # Visual Studio related files
 **/.vs
 **/x64
+**/Debug
+**/Release
 *.user
