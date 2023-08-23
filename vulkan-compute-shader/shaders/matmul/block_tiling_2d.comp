@@ -7,7 +7,8 @@ const uint BM = 64;
 const uint BN = 64;
 const uint BK = 32;
 const uint TM = 8;
-const uint TN = 1; // Performance is significantly worse when TN is not 1
+const uint TN = 1; // Performance is significantly worse when TN is not 1.
+                   // The performance cost mainly comes from writing back to global C.
 
 const float alpha = 1.0;
 const float beta = 1.0;
@@ -30,6 +31,11 @@ shared float a_shared[BM * BK];
 shared float b_shared[BK * BN];
 
 void main() {
+    // This is just to make sure the buffers are not optimized away
+    a_shared[0] = a_global[0];
+    b_shared[0] = b_global[0];
+    c_global[0] = a_shared[0] + b_shared[0];
+
     uint thread_index = gl_LocalInvocationIndex;
 
     uint thread_num = (BN / TN) * (BM / TM);
@@ -60,6 +66,7 @@ void main() {
         for (uint i = 0; i < BK; i += b_tile_stride) {
             b_shared[(b_tile_row + i) * BN + b_tile_col] = b_global[b_global_offset + (b_tile_row + i) * N + b_tile_col];
         }
+
         barrier();
         a_global_offset += BK;
         b_global_offset += BK * N;
@@ -73,6 +80,8 @@ void main() {
         }
         barrier();
     }
+
+    // TODO: Writing to C is slow when TN is not 1.
     for (uint i=0; i<TM; i++) {
         for (uint j=0; j<TN; j++) {
             c_global[c_global_offset + (ty + i) * N + tx + j] = alpha * c_tile[i*TN+j] + beta * c_global[c_global_offset + (ty + i) * N + tx + j];
