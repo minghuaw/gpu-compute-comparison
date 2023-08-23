@@ -133,7 +133,9 @@ fn main() {
     //     .expect("failed to create shader module");
     // let shader = kernels::matmul::tiling::load(device.clone())
     //     .expect("failed to create shader module");
-    let shader = kernels::matmul::block_tiling_1d::load(device.clone())
+    // let shader = kernels::matmul::block_tiling_1d::load(device.clone())
+    //     .expect("failed to create shader module");
+    let shader = kernels::matmul::block_tiling_2d::load(device.clone())
         .expect("failed to create shader module");
     let compute_pipeline = ComputePipeline::new(
         device.clone(),
@@ -175,8 +177,10 @@ fn main() {
     )
     .unwrap();
 
-    let x = if M % BM == 0 { M / BM } else { M / BM + 1 } as u32;
-    let y = if N % BN == 0 { N / BN } else { N / BN + 1 } as u32;
+    // let x = if M % BM == 0 { M / BM } else { M / BM + 1 } as u32;
+    // let y = if N % BN == 0 { N / BN } else { N / BN + 1 } as u32;
+    let x = (M / 64) as u32; // block_tiling_2d
+    let y = (N / 64) as u32;
     let work_group_counts = [x, y, 1];
 
     command_buffer_builder
@@ -202,18 +206,14 @@ fn main() {
     let elapsed = start.elapsed();
     println!("vulkan elapsed: {:?}", elapsed);
     
-    let start = std::time::Instant::now();
-    let mut expected: ArrayBase<OwnedRepr<f32>, _> = ArrayBase::zeros((M, N));
-    general_mat_mul(1.0, &matrix_a, &matrix_b, 1.0, &mut expected);
-    let elapsed = start.elapsed();
-    println!("openblas elapsed: {:?}", elapsed);
+    // let start = std::time::Instant::now();
+    // let mut expected: ArrayBase<OwnedRepr<f32>, _> = ArrayBase::zeros((M, N));
+    // general_mat_mul(1.0, &matrix_a, &matrix_b, 1.0, &mut expected);
+    // let elapsed = start.elapsed();
+    // println!("openblas elapsed: {:?}", elapsed);
 
-    let is_equal = is_equal::<M, N>(matrix_c_buf, expected);
-    println!("is_equal: {}", is_equal);
-    // let content = matrix_c_buf.read().unwrap();
-    // println!("Element: {}", content[M * N - 1]);
-    // println!("Everything succeeded!");
-    
+    // let is_equal = is_equal::<M, N>(matrix_c_buf, expected);
+    // println!("is_equal: {}", is_equal);    
 }
 
 fn is_equal<const M: usize, const N: usize>(value: Subbuffer<[f32]>, expected: ArrayBase<OwnedRepr<f32>, Dim<[usize; 2]>>) -> bool {

@@ -25,3 +25,10 @@ pub(crate) mod block_tiling_1d {
         path: "./shaders/matmul/block_tiling_1d.comp"
     }
 }
+
+pub(crate) mod block_tiling_2d {
+    vulkano_shaders::shader! {
+        ty: "compute",
+        path: "./shaders/matmul/block_tiling_2d.comp"
+    }
+}
