@@ -206,14 +206,14 @@ fn main() {
     let elapsed = start.elapsed();
     println!("vulkan elapsed: {:?}", elapsed);
     
-    // let start = std::time::Instant::now();
-    // let mut expected: ArrayBase<OwnedRepr<f32>, _> = ArrayBase::zeros((M, N));
-    // general_mat_mul(1.0, &matrix_a, &matrix_b, 1.0, &mut expected);
-    // let elapsed = start.elapsed();
-    // println!("openblas elapsed: {:?}", elapsed);
+    let start = std::time::Instant::now();
+    let mut expected: ArrayBase<OwnedRepr<f32>, _> = ArrayBase::zeros((M, N));
+    general_mat_mul(1.0, &matrix_a, &matrix_b, 1.0, &mut expected);
+    let elapsed = start.elapsed();
+    println!("openblas elapsed: {:?}", elapsed);
 
-    // let is_equal = is_equal::<M, N>(matrix_c_buf, expected);
-    // println!("is_equal: {}", is_equal);    
+    let is_equal = is_equal::<M, N>(matrix_c_buf, expected);
+    println!("is_equal: {}", is_equal);    
 }
 
 fn is_equal<const M: usize, const N: usize>(value: Subbuffer<[f32]>, expected: ArrayBase<OwnedRepr<f32>, Dim<[usize; 2]>>) -> bool {

@@ -65,10 +65,13 @@ int main()
         //grid_size = dim3(M / BM, N / BN, 1);
         //matmul::cache_blocking<M, N, K, BM, BN, BK><<<grid_size, block_size>>>(alpha, device_matrix_a, device_matrix_b, beta, device_matrix_c);
 
-        block_size = dim3(BM / TM, BN, 1);
-        grid_size = dim3(M / BM, N / BN, 1);
-        matmul::block_tiling_1d<M, N, K, BM, BN, BK, TM><<<grid_size, block_size>>>(alpha, device_matrix_a, device_matrix_b, beta, device_matrix_c);
+        //block_size = dim3(BM / TM, BN, 1);
+        //grid_size = dim3(M / BM, N / BN, 1);
+        //matmul::block_tiling_1d<M, N, K, BM, BN, BK, TM><<<grid_size, block_size>>>(alpha, device_matrix_a, device_matrix_b, beta, device_matrix_c);
 
+        block_size = dim3(256, 1, 1);
+        grid_size = dim3(M / 128, N / 128, 1);
+        matmul::block_tiling_2d<M, N, K, 128, 128, 8, 8, 8><<<grid_size, block_size>>>(alpha, device_matrix_a, device_matrix_b, beta, device_matrix_c);
     }
     cudaCheck(cudaEventRecord(end));
 

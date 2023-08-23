@@ -48,12 +48,10 @@ void main() {
     uint b_tile_col = thread_index % BN;
     uint b_tile_stride = thread_num / BN;
 
-    // float c_tile[TM * TN];
-    // for (uint i = 0; i < TM * TN; i++) {
-    //     c_tile[i] = 0.0;
-    // }
-
-    float c_tile[TM][TN];
+    float c_tile[TM * TN];
+    for (uint i = 0; i < TM * TN; i++) {
+        c_tile[i] = 0.0;
+    }
 
     for (uint k=0; k<K; k+=BK) {
         for (uint i = 0; i < BM; i += a_tile_stride) {
@@ -69,7 +67,7 @@ void main() {
         for (uint kk=0; kk<BK; kk++) {
             for (uint i=0; i<TM; i++) {
                 for (uint j=0; j<TN; j++) {
-                    c_tile[i][j] += a_shared[(ty + i) * BK + kk] * b_shared[kk * BN + tx + j];
+                    c_tile[i*TN+j] += a_shared[(ty + i) * BK + kk] * b_shared[kk * BN + tx + j];
                 }
             }
         }
@@ -77,7 +75,7 @@ void main() {
     }
     for (uint i=0; i<TM; i++) {
         for (uint j=0; j<TN; j++) {
-            c_global[c_global_offset + (ty + i) * N + tx + j] = alpha * c_tile[i][j] + beta * c_global[c_global_offset + (ty + i) * N + tx + j];
+            c_global[c_global_offset + (ty + i) * N + tx + j] = alpha * c_tile[i*TN+j] + beta * c_global[c_global_offset + (ty + i) * N + tx + j];
         }
     }
 }
