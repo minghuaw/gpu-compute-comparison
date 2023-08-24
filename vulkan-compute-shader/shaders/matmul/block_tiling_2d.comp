@@ -87,4 +87,8 @@ void main() {
             c_global[c_global_offset + (ty + i) * N + tx + j] = alpha * c_tile[i*TN+j] + beta * c_global[c_global_offset + (ty + i) * N + tx + j];
         }
     }
+    // for (uint i=0; i<TM; i++) {
+    //     c_global[c_global_offset + (ty + i) * N + tx + 0] = alpha * c_tile[i*TN+0] + beta * c_global[c_global_offset + (ty + i) * N + tx + 0];
+    //     c_global[c_global_offset + (ty + i) * N + tx + 1] = alpha * c_tile[i*TN+1] + beta * c_global[c_global_offset + (ty + i) * N + tx + 1];
+    // }
 }

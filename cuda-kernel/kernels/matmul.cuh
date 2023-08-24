@@ -285,6 +285,7 @@ namespace matmul {
             __syncthreads();
             a_global_offset += BK;
             b_global_offset += BK * N;
+
             for (int kk = 0; kk < BK; kk++) {
                 for (int i = 0; i < TM; i++) {
                     for (int j = 0; j < TN; j++)
@@ -294,9 +295,9 @@ namespace matmul {
             __syncthreads();
         }
         for (int i = 0; i < TM; i++) {
-            for (int l = 0; l < TN; l++)
-                C[c_global_offset + (ty + i) * N + tx + l] =
-                        alpha * c_tile[i * TN + l] + beta * C[c_global_offset + (ty + i) * N + tx + l];
+            for (int j = 0; j < TN; j++)
+                C[c_global_offset + (ty + i) * N + tx + j] =
+                        alpha * c_tile[i * TN + j] + beta * C[c_global_offset + (ty + i) * N + tx + j];
         }
     }
 }

@@ -135,7 +135,11 @@ fn main() {
     //     .expect("failed to create shader module");
     // let shader = kernels::matmul::block_tiling_1d::load(device.clone())
     //     .expect("failed to create shader module");
-    let shader = kernels::matmul::block_tiling_2d::load(device.clone())
+    // let shader = kernels::matmul::block_tiling_2d::load(device.clone())
+    //     .expect("failed to create shader module");
+    // let shader = kernels::matmul::write_tile_1d::load(device.clone())
+    //     .expect("failed to create shader module");
+    let shader = kernels::matmul::write_tile_2d::load(device.clone())
         .expect("failed to create shader module");
     let compute_pipeline = ComputePipeline::new(
         device.clone(),

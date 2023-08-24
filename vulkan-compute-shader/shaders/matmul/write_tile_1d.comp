@@ -1,0 +1,52 @@
+#version 460
+
+const uint M = 4096;
+const uint N = 4096;
+const uint K = 4096;
+
+const uint BM = 64;
+const uint BN = 64;
+const uint BK = 32;
+
+const uint TM = 8;
+
+const float alpha = 1.0;
+const float beta = 1.0;
+
+layout(local_size_x = BM / TM, local_size_y = BN, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) buffer readonly MatrixA {
+    float a_global[];
+};
+
+layout(set = 0, binding = 1) buffer readonly MatrixB {
+    float b_global[];
+};
+
+layout(set = 0, binding = 2) buffer MatrixC {
+    float c_global[];
+};
+
+shared float a_shared[BM * BK];
+shared float b_shared[BK * BN];
+
+void main() {
+    // This is just to make sure the buffers are not optimized away
+    a_shared[0] = a_global[0];
+    b_shared[0] = b_global[0];
+    c_global[0] = a_shared[0] + b_shared[0];
+    uint thread_index = gl_LocalInvocationIndex;
+    uint thread_num = BM * BN / TM;
+
+    uint tx =  thread_index % BN;
+    uint ty = thread_index / BN * TM;
+
+    const uint c_global_offset = gl_WorkGroupID.y * BM * N + gl_WorkGroupID.x * BN;
+
+    // Explicitly initialize to zero. TODO: test if this is necessary
+    float c_tile[TM];
+
+    for (uint j = 0; j < TM; j++) {
+        c_global[c_global_offset + (ty + j) * N + tx] = alpha * c_tile[j] + beta * c_global[c_global_offset + (ty + j) * N + tx];
+    }
+}
