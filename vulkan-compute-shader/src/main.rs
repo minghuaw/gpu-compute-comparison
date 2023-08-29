@@ -6,6 +6,8 @@ use vulkano::{
     VulkanLibrary,
 };
 
+use crate::kernels::matmul;
+
 extern crate openblas_src;
 
 mod common;
@@ -61,6 +63,9 @@ fn main() {
     .expect("failed to create device");
     let queue = queues.next().unwrap();
 
-    let elapsed = bandwidth::block_1d_to_global::run(device, queue).unwrap();
-    println!("vulkan elapsed: {:?}", elapsed);
+    let elapsed = bandwidth::block_1d_to_global::run(device.clone(), queue.clone()).unwrap();
+    println!("bandwidth::block_1d_to_global elapsed: {:?}", elapsed);
+
+    let elapsed = matmul::naive::run(device.clone(), queue.clone()).unwrap();
+    println!("matmul::naive elapsed: {:?}", elapsed);
 }

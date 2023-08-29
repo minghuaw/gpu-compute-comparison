@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use ndarray::{Array2, ArrayBase};
 use ndarray_rand::RandomExt;
@@ -22,9 +22,26 @@ use vulkano::{
 use crate::common::{BoxError, K, M, N};
 
 pub(crate) mod naive {
+    use std::{sync::Arc, time::Duration};
+
+    use vulkano::device::{Device, Queue};
+
+    use crate::common::{BoxError, M, N};
+
+    const BM: usize = 32;
+    const BN: usize = 32;
+
     vulkano_shaders::shader! {
         ty: "compute",
         path: "./shaders/matmul/naive.comp"
+    }
+
+    pub(crate) fn run(
+        device: Arc<Device>,
+        queue: Arc<Queue>,
+    ) -> Result<Duration, BoxError> {
+        let shader = self::load(device.clone())?;
+        super::run(device, queue, shader, [(M / BM) as u32, (N / BN) as u32, 1])
     }
 }
 
@@ -74,8 +91,8 @@ fn run(
     device: Arc<Device>,
     queue: Arc<Queue>,
     shader: Arc<ShaderModule>,
-    _group_counts: [u32; 3],
-) -> Result<(), BoxError> {
+    group_counts: [u32; 3],
+) -> Result<Duration, BoxError> {
     let memory_allocator = StandardMemoryAllocator::new_default(device.clone());
 
     let matrix_a: Array2<f32> = ArrayBase::random((M, K), Uniform::new(-1.0, 1.0));
@@ -119,20 +136,6 @@ fn run(
         matrix_c,
     )?;
 
-    // let shader =
-    //     kernels::matmul::naive::load(device.clone()).expect("failed to create shader module");
-    // let shader = kernels::matmul::cache_blocking::load(device.clone())
-    //     .expect("failed to create shader module");
-    // let shader = kernels::matmul::tiling::load(device.clone())
-    //     .expect("failed to create shader module");
-    // let shader = kernels::matmul::block_tiling_1d::load(device.clone())
-    //     .expect("failed to create shader module");
-    // let shader = kernels::matmul::block_tiling_2d::load(device.clone())
-    //     .expect("failed to create shader module");
-    // let shader = kernels::matmul::write_tile_1d::load(device.clone())
-    //     .expect("failed to create shader module");
-    // let shader = kernels::matmul::write_tile_2d::load(device.clone())
-    //     .expect("failed to create shader module");
     let compute_pipeline = ComputePipeline::new(
         device.clone(),
         shader.entry_point("main").unwrap(),
@@ -171,12 +174,6 @@ fn run(
     )
     .unwrap();
 
-    // let x = if M % BM == 0 { M / BM } else { M / BM + 1 } as u32;
-    // let y = if N % BN == 0 { N / BN } else { N / BN + 1 } as u32;
-    let x = (M / 64) as u32; // block_tiling_2d
-    let y = (N / 64) as u32;
-    let work_group_counts = [x, y, 1];
-
     command_buffer_builder
         .bind_pipeline_compute(compute_pipeline.clone())
         .bind_descriptor_sets(
@@ -185,7 +182,7 @@ fn run(
             descriptor_set_layout_index as u32,
             descriptor_set,
         )
-        .dispatch(work_group_counts)?;
+        .dispatch(group_counts)?;
 
     let command_buffer = command_buffer_builder.build().unwrap();
 
@@ -196,8 +193,8 @@ fn run(
         .then_signal_fence_and_flush()?;
     future.wait(None)?;
     let elapsed = start.elapsed();
-    println!("vulkan elapsed: {:?}", elapsed);
-
+    
+    // println!("vulkan elapsed: {:?}", elapsed);
     // let start = std::time::Instant::now();
     // let mut expected: ArrayBase<OwnedRepr<f32>, _> = ArrayBase::zeros((M, N));
     // general_mat_mul(1.0, &matrix_a, &matrix_b, 1.0, &mut expected);
@@ -207,7 +204,7 @@ fn run(
     // let is_equal = is_equal::<M, N>(matrix_c_buf, expected);
     // println!("is_equal: {}", is_equal);
 
-    Ok(())
+    Ok(elapsed)
 }
 
 fn is_equal<const M: usize, const N: usize>(
