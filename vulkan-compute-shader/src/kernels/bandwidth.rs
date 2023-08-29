@@ -20,12 +20,7 @@ use crate::common::{BoxError, M, N};
 
 pub(crate) mod block_1d_to_global {
     //! This kernel simply copies from the 1d shared memory block to the global memory
-
-    use std::{sync::Arc, time::Duration};
-
-    use vulkano::device::{Device, Queue};
-
-    use crate::common::{BoxError, M};
+    use super::*;
 
     vulkano_shaders::shader! {
         ty: "compute",
@@ -36,12 +31,29 @@ pub(crate) mod block_1d_to_global {
 
     pub(crate) fn run(device: Arc<Device>, queue: Arc<Queue>) -> Result<Duration, BoxError> {
         let shader = self::load(device.clone())?;
-        super::run(device, queue, shader, [(M / BM) as u32, 1, 1])
+        super::run(device, queue, shader, [(M / BM) as u32, N as u32, 1])
     }
 }
 
 pub(crate) mod block_2d_to_global {
     //! This kernel simply copies from the 2d shared memory block to the global memory
+    use super::*;
+
+    const BM: usize = 32;
+    const BN: usize = 32;
+
+    vulkano_shaders::shader! {
+        ty: "compute",
+        path: "./shaders/bandwidth/block_2d_to_global.comp"
+    }
+
+    pub(crate) fn run(
+        device: Arc<Device>,
+        queue: Arc<Queue>,
+    ) -> Result<Duration, BoxError> {
+        let shader = self::load(device.clone())?;
+        super::run(device, queue, shader, [(M / BM) as u32, (N / BN) as u32, 1])
+    }
 }
 
 pub(crate) mod tile_1d_to_global {
@@ -140,5 +152,10 @@ fn run(
         .then_signal_fence_and_flush()?;
     future.wait(None)?;
     let elapsed = start.elapsed();
+
+    let guard = output_buffer.read()?;
+    let read_index = 5000;
+    println!("output_buffer[{}]: {:?}", read_index, guard[read_index]);
+
     Ok(elapsed)
 }
