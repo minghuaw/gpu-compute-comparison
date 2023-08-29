@@ -18,13 +18,13 @@ use vulkano::{
 
 use crate::common::{BoxError, M, N};
 
-pub(crate) mod block_1d_to_global {
+pub(crate) mod block_to_global_1d {
     //! This kernel simply copies from the 1d shared memory block to the global memory
     use super::*;
 
     vulkano_shaders::shader! {
         ty: "compute",
-        path: "./shaders/bandwidth/block_1d_to_global.comp"
+        path: "./shaders/bandwidth/block_to_global_1d.comp"
     }
 
     const BM: usize = 32;
@@ -35,7 +35,7 @@ pub(crate) mod block_1d_to_global {
     }
 }
 
-pub(crate) mod block_2d_to_global {
+pub(crate) mod block_to_global_2d {
     //! This kernel simply copies from the 2d shared memory block to the global memory
     use super::*;
 
@@ -44,7 +44,7 @@ pub(crate) mod block_2d_to_global {
 
     vulkano_shaders::shader! {
         ty: "compute",
-        path: "./shaders/bandwidth/block_2d_to_global.comp"
+        path: "./shaders/bandwidth/block_to_global_2d.comp"
     }
 
     pub(crate) fn run(device: Arc<Device>, queue: Arc<Queue>) -> Result<Duration, BoxError> {
@@ -53,7 +53,7 @@ pub(crate) mod block_2d_to_global {
     }
 }
 
-pub(crate) mod tile_1d_to_global {
+pub(crate) mod tile_to_global_1d {
     //! This kernel simply copies from the 1d tile to the global memory. The tile
     //! is a small 1d array that is stored in the register file.
 
@@ -63,7 +63,7 @@ pub(crate) mod tile_1d_to_global {
 
     vulkano_shaders::shader! {
         ty: "compute",
-        path: "./shaders/bandwidth/tile_1d_to_global.comp"
+        path: "./shaders/bandwidth/tile_to_global_1d.comp"
     }
 
     pub(crate) fn run(device: Arc<Device>, queue: Arc<Queue>) -> Result<Duration, BoxError> {
@@ -72,17 +72,17 @@ pub(crate) mod tile_1d_to_global {
     }
 }
 
-pub(crate) mod tile_2d_to_global {
+pub(crate) mod tile_to_global_2d {
     //! This kernel simply copies from the 2d tile to the global memory. The tile
     //! is a small 2d array that is stored in the register file.
 }
 
-pub(crate) mod block_tile_1d_to_global {
+pub(crate) mod block_tile_to_global_1d {
     //! This kernel fisrt copies from tile to shared memory block and then copies
     //! from the shared memory block to the global memory.
 }
 
-pub(crate) mod block_tile_2d_to_global {
+pub(crate) mod block_tile_to_global_2d {
     //! This kernel fisrt copies from tile to shared memory block and then copies
     //! from the shared memory block to the global memory.
 }
