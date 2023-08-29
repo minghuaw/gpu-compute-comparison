@@ -1,6 +1,6 @@
 use std::{sync::Arc, time::Duration};
 
-use ndarray::{Array2, ArrayBase, linalg::general_mat_mul};
+use ndarray::{linalg::general_mat_mul, Array2, ArrayBase};
 use ndarray_rand::RandomExt;
 use rand::distributions::Uniform;
 use vulkano::{
@@ -36,10 +36,7 @@ pub(crate) mod naive {
         path: "./shaders/matmul/naive.comp"
     }
 
-    pub(crate) fn run(
-        device: Arc<Device>,
-        queue: Arc<Queue>,
-    ) -> Result<Duration, BoxError> {
+    pub(crate) fn run(device: Arc<Device>, queue: Arc<Queue>) -> Result<Duration, BoxError> {
         let shader = self::load(device.clone())?;
         super::run(device, queue, shader, [(M / BM) as u32, (N / BN) as u32, 1])
     }
@@ -193,7 +190,7 @@ fn run(
         .then_signal_fence_and_flush()?;
     future.wait(None)?;
     let elapsed = start.elapsed();
-    
+
     let mut expected: Array2<f32> = ArrayBase::zeros((M, N));
     general_mat_mul(1.0, &matrix_a, &matrix_b, 1.0, &mut expected);
     assert!(is_equal::<M, N>(matrix_c_buf, expected));
@@ -210,7 +207,10 @@ fn is_equal<const M: usize, const N: usize>(
     let total = M * N;
     for i in 0..total {
         if f32::abs(guard[i] - slice[i]) > 1e-2 {
-            println!("at index {}: value {} != expected {}", i, guard[i], slice[i]);
+            println!(
+                "at index {}: value {} != expected {}",
+                i, guard[i], slice[i]
+            );
             return false;
         }
     }

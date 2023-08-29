@@ -47,10 +47,7 @@ pub(crate) mod block_2d_to_global {
         path: "./shaders/bandwidth/block_2d_to_global.comp"
     }
 
-    pub(crate) fn run(
-        device: Arc<Device>,
-        queue: Arc<Queue>,
-    ) -> Result<Duration, BoxError> {
+    pub(crate) fn run(device: Arc<Device>, queue: Arc<Queue>) -> Result<Duration, BoxError> {
         let shader = self::load(device.clone())?;
         super::run(device, queue, shader, [(M / BM) as u32, (N / BN) as u32, 1])
     }
@@ -59,6 +56,20 @@ pub(crate) mod block_2d_to_global {
 pub(crate) mod tile_1d_to_global {
     //! This kernel simply copies from the 1d tile to the global memory. The tile
     //! is a small 1d array that is stored in the register file.
+
+    use super::*;
+
+    const BM: usize = 64;
+
+    vulkano_shaders::shader! {
+        ty: "compute",
+        path: "./shaders/bandwidth/tile_1d_to_global.comp"
+    }
+
+    pub(crate) fn run(device: Arc<Device>, queue: Arc<Queue>) -> Result<Duration, BoxError> {
+        let shader = self::load(device.clone())?;
+        super::run(device, queue, shader, [(M / BM) as u32, N as u32, 1])
+    }
 }
 
 pub(crate) mod tile_2d_to_global {
