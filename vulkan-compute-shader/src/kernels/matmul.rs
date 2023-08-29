@@ -1,6 +1,6 @@
 use std::{sync::Arc, time::Duration};
 
-use ndarray::{Array2, ArrayBase};
+use ndarray::{Array2, ArrayBase, linalg::general_mat_mul};
 use ndarray_rand::RandomExt;
 use rand::distributions::Uniform;
 use vulkano::{
@@ -156,9 +156,9 @@ fn run(
         &descriptor_set_allocator,
         descriptor_set_layout.clone(),
         [
-            WriteDescriptorSet::buffer(0, matrix_c_buf.clone()),
-            WriteDescriptorSet::buffer(1, matrix_a_buf.clone()),
-            WriteDescriptorSet::buffer(2, matrix_b_buf.clone()),
+            WriteDescriptorSet::buffer(0, matrix_a_buf.clone()),
+            WriteDescriptorSet::buffer(1, matrix_b_buf.clone()),
+            WriteDescriptorSet::buffer(2, matrix_c_buf.clone()),
         ],
     )?;
 
@@ -194,15 +194,9 @@ fn run(
     future.wait(None)?;
     let elapsed = start.elapsed();
     
-    // println!("vulkan elapsed: {:?}", elapsed);
-    // let start = std::time::Instant::now();
-    // let mut expected: ArrayBase<OwnedRepr<f32>, _> = ArrayBase::zeros((M, N));
-    // general_mat_mul(1.0, &matrix_a, &matrix_b, 1.0, &mut expected);
-    // let elapsed = start.elapsed();
-    // println!("openblas elapsed: {:?}", elapsed);
-
-    // let is_equal = is_equal::<M, N>(matrix_c_buf, expected);
-    // println!("is_equal: {}", is_equal);
+    let mut expected: Array2<f32> = ArrayBase::zeros((M, N));
+    general_mat_mul(1.0, &matrix_a, &matrix_b, 1.0, &mut expected);
+    assert!(is_equal::<M, N>(matrix_c_buf, expected));
 
     Ok(elapsed)
 }
@@ -216,7 +210,7 @@ fn is_equal<const M: usize, const N: usize>(
     let total = M * N;
     for i in 0..total {
         if f32::abs(guard[i] - slice[i]) > 1e-2 {
-            println!("{}: {} != {}", i, guard[i], slice[i]);
+            println!("at index {}: value {} != expected {}", i, guard[i], slice[i]);
             return false;
         }
     }
