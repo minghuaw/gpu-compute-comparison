@@ -14,16 +14,11 @@ layout(set = 0, binding = 0) buffer OutputBuffer {
 shared float shared_block[BM];
 
 void main() {
-    // Prepares the shared memory block.
-    for (uint i=0; i<BM; i++) {
-        shared_block[i] = float(gl_LocalInvocationIndex);
-    }
-
+    // Collaboratively prepares the shared memory block.
+    shared_block[gl_LocalInvocationIndex] = float(gl_LocalInvocationID.x);
     barrier();
 
-    uint offset = 0;
-    for (uint n=0; n<N; n++) {
-        output_buffer[offset + gl_GlobalInvocationID.x] = shared_block[gl_LocalInvocationIndex];
-        barrier();
-    }
+    uint global_offset = gl_WorkGroupID.y * M + gl_WorkGroupID.x * BM;
+    output_buffer[global_offset + gl_LocalInvocationIndex] = shared_block[gl_LocalInvocationIndex];
+    barrier();
 }

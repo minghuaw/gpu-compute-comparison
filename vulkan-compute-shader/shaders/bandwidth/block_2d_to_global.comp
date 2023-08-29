@@ -4,3 +4,24 @@ const uint M = 4096;
 const uint N = 4096;
 const uint BM = 32;
 const uint BN = 32;
+
+layout(local_size_x = BM, local_size_y = BN, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) buffer OutputBuffer {
+    float output_buffer[];
+};
+
+shared float shared_block[BM * BN];
+
+void main() {
+    // Collaboratively prepares the shared block
+    shared_block[gl_LocalInvocationIndex] = float(gl_GlobalInvocationID.x);
+    barrier();
+
+    // Write the shared block to the output buffer
+    uint shared_row = gl_LocalInvocationID.y;
+    uint shared_col = gl_LocalInvocationID.x;
+    uint global_offset = gl_WorkGroupID.x * BM * N + gl_WorkGroupID.y * BN;
+    output_buffer[global_offset + shared_row * N + shared_col] = shared_block[shared_row * BN + shared_col];
+    barrier();
+}
