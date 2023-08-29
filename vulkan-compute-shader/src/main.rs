@@ -17,6 +17,9 @@ fn main() {
     let elapsed = bandwidth::tile_to_global_1d::run(device.clone(), queue.clone()).unwrap();
     println!("bandwidth::tile_to_global_1d elapsed: {:?}", elapsed);
 
+    let elapsed = bandwidth::block_tile_to_global_1d::run(device.clone(), queue.clone()).unwrap();
+    println!("bandwidth::block_tile_to_global_1d elapsed: {:?}", elapsed);
+
     // let elapsed = matmul::naive::run(device.clone(), queue.clone()).unwrap();
     // println!("matmul::naive elapsed: {:?}", elapsed);
 }

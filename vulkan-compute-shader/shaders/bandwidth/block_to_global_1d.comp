@@ -20,5 +20,4 @@ void main() {
 
     uint global_offset = gl_WorkGroupID.y * M + gl_WorkGroupID.x * BM;
     output_buffer[global_offset + gl_LocalInvocationIndex] = shared_block[gl_LocalInvocationIndex];
-    barrier();
 }

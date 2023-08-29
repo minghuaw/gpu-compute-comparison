@@ -23,5 +23,4 @@ void main() {
     uint shared_col = gl_LocalInvocationID.x;
     uint global_offset = gl_WorkGroupID.x * BM * N + gl_WorkGroupID.y * BN;
     output_buffer[global_offset + shared_row * N + shared_col] = shared_block[shared_row * BN + shared_col];
-    barrier();
 }

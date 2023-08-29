@@ -80,6 +80,21 @@ pub(crate) mod tile_to_global_2d {
 pub(crate) mod block_tile_to_global_1d {
     //! This kernel fisrt copies from tile to shared memory block and then copies
     //! from the shared memory block to the global memory.
+    
+    use super::*;
+
+    const BM: usize = 64;
+    const TM: usize = 8;
+
+    vulkano_shaders::shader! {
+        ty: "compute",
+        path: "./shaders/bandwidth/block_tile_to_global_1d.comp"
+    }
+
+    pub(crate) fn run(device: Arc<Device>, queue: Arc<Queue>) -> Result<Duration, BoxError> {
+        let shader = self::load(device.clone())?;
+        super::run(device, queue, shader, [(M / BM) as u32, N as u32, 1])
+    }
 }
 
 pub(crate) mod block_tile_to_global_2d {

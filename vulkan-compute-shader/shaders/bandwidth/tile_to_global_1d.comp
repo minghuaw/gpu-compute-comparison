@@ -23,5 +23,4 @@ void main() {
     for (uint i = 0; i < TM; i++) {
         output_buffer[global_offset + block_offset + i] = local_buffer[i];
     }
-    barrier();
 }

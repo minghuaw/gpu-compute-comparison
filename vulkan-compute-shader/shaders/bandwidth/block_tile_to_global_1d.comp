@@ -1,0 +1,35 @@
+#version 460
+
+const uint M = 4096;
+const uint N = 4096;
+const uint BM = 64;
+const uint TM = 8;
+
+layout(local_size_x = BM/TM, local_size_y = 1, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) buffer OutputBuffer {
+    float output_buffer[];
+};
+
+shared float shared_buffer[BM];
+
+void main() {
+    float local_buffer[TM];
+    uint block_offset = gl_LocalInvocationID.x * TM;
+    for (uint i = 0; i < TM; i++) {
+        local_buffer[i] = float(block_offset + i);
+    }
+    barrier();
+
+    // Copy to shared buffer first
+    for (uint i = 0; i < TM; i++) {
+        shared_buffer[block_offset + i] = local_buffer[i];
+    }
+    barrier();
+
+    // Copy to output buffer
+    uint global_offset = gl_WorkGroupID.y * M + gl_WorkGroupID.x * BM;
+    for (uint i = 0; i < TM; i++) {
+        output_buffer[global_offset + block_offset + i] = shared_buffer[block_offset + i];
+    }
+}
