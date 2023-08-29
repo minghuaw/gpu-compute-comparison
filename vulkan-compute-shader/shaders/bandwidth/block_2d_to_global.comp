@@ -1,0 +1,6 @@
+#version 460
+
+const uint M = 4096;
+const uint N = 4096;
+const uint BM = 32;
+const uint BN = 32;

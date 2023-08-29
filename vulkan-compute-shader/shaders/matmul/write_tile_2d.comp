@@ -5,7 +5,7 @@ const uint N = 4096;
 const uint K = 4096;
 const uint BM = 64;
 const uint BN = 64;
-const uint BK = 32;
+const uint BK = 64;
 const uint TM = 8;
 const uint TN = 8; // Performance is significantly worse when TN is not 1.
                    // The performance cost mainly comes from writing back to global C.
@@ -15,20 +15,21 @@ const float beta = 1.0;
 
 layout(local_size_x = BM/TM, local_size_y = BN/TN, local_size_z = 1) in;
 
-layout(set = 0, binding = 0) buffer readonly MatrixA {
+layout(set = 0, binding = 1) buffer MatrixA {
     float a_global[];
 };
 
-layout(set = 0, binding = 1) buffer readonly MatrixB {
+layout(set = 0, binding = 2) buffer MatrixB {
     float b_global[];
 };
 
-layout(set = 0, binding = 2) buffer writeonly MatrixC {
+layout(set = 0, binding = 0) buffer MatrixC {
     float c_global[];
 };
 
 shared float a_shared[BM * BK];
 shared float b_shared[BK * BN];
+shared float c_shared[BM * BN];
 
 void main() {
     // This is just to make sure the buffers are not optimized away
@@ -42,15 +43,71 @@ void main() {
     uint tx = (thread_index % (BN / TN)) * TN;
     uint ty = (thread_index / (BN / TN)) * TM;
 
+    uint a_global_offset = gl_WorkGroupID.y * BM * K;
+    uint b_global_offset = gl_WorkGroupID.x * BN;
     const uint c_global_offset = gl_WorkGroupID.y * BM * N + gl_WorkGroupID.x * BN;
 
-    float c_tile[TM * TN];
-    // TODO: Writing to C is slow when TN is not 1.
-    for (uint i=0; i<TM; i++) {
-        for (uint j=0; j<TN; j++) {
-            // c_global[c_global_offset + (ty + i) * N + tx + j] = alpha * c_tile[i*TN+j] + beta * c_global[c_global_offset + (ty + i) * N + tx + j];
-            c_global[c_global_offset + (ty + i) * N + tx + j] = alpha * c_tile[i*TN+j];
-            // c_tile[i*TN+j] = c_global[c_global_offset + (ty + i) * N + tx + j];
+    uint a_tile_row = thread_index / BK;
+    uint a_tile_col = thread_index % BK;
+    uint a_tile_stride = thread_num / BK;
+
+    uint b_tile_row = thread_index / BN;
+    uint b_tile_col = thread_index % BN;
+    uint b_tile_stride = thread_num / BN;
+
+    uint c_tile_row = thread_index / BN;
+    uint c_tile_col = thread_index % BN;
+    uint c_tile_stride = thread_num / BN;
+    
+    for (uint k=0; k<K; k+=BK) {
+        // for (uint i = 0; i < BM; i += a_tile_stride) {
+        //     // a_shared[(a_tile_row + i) * BK + a_tile_col] = a_global[a_global_offset + (a_tile_row + i) * K + a_tile_col];
+        //     a_global[a_global_offset + (a_tile_row + i) * K + a_tile_col] = a_shared[(a_tile_row + i) * BK + a_tile_col];
+        // }
+        // for (uint i = 0; i < BK; i += b_tile_stride) {
+        //     // b_shared[(b_tile_row + i) * BN + b_tile_col] = b_global[b_global_offset + (b_tile_row + i) * N + b_tile_col];
+        //     b_global[b_global_offset + (b_tile_row + i) * N + b_tile_col] = b_shared[(b_tile_row + i) * BN + b_tile_col];
+        // }
+        for (uint i = 0; i < BM; i += c_tile_stride) {
+            // b_shared[(b_tile_row + i) * BN + b_tile_col] = b_global[b_global_offset + (b_tile_row + i) * N + b_tile_col];
+            c_global[c_global_offset + (c_tile_row + i) * N + c_tile_col] = c_shared[(c_tile_row + i) * BN + c_tile_col];
         }
+
+        barrier();
+        // a_global_offset += BK;
+        // b_global_offset += BK * N;
+
+        // for (uint kk=0; kk<BK; kk++) {
+        //     for (uint i=0; i<TM; i++) {
+        //         for (uint j=0; j<TN; j++) {
+        //             c_tile[i*TN+j] += a_shared[(ty + i) * BK + kk] * b_shared[kk * BN + tx + j];
+        //         }
+        //     }
+        // }
+        // barrier();
     }
+
+    float c_tile[TM * TN];
+    // for (uint i=0; i<TM; i++) {
+    //     for (uint j=0; j<TN; j++) {
+    //         // Copy from tile to shared memory
+    //         c_shared[(ty + i) * BN + tx + j] = c_tile[i * TN + j];
+    //     }
+    // }
+    barrier();
+
+    // // TODO: Writing to C is slow when TN is not 1.
+    // for (uint i=0; i<TM; i++) {
+    //     for (uint j=0; j<TN; j++) {
+    //         // c_global[c_global_offset + (ty + i) * N + tx + j] = alpha * c_tile[i*TN+j] + beta * c_global[c_global_offset + (ty + i) * N + tx + j];
+    //         // c_global[c_global_offset + (ty + i) * N + tx + j] = alpha * c_tile[i*TN+j];
+    //         // c_tile[i*TN+j] = c_global[c_global_offset + (ty + i) * N + tx + j];
+    //     }
+    // }
+
+    // for (uint k=0; k<K; k+=BK) {
+    //     for (uint i=0; i<BM; i += c_tile_stride) {
+    //         c_global[c_global_offset + (c_tile_row + i) * N + c_tile_col] = c_shared[(c_tile_row + i) * BN + c_tile_col];
+    //     }
+    // }
 }

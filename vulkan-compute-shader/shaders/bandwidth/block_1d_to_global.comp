@@ -1,0 +1,29 @@
+#version 460
+
+const uint M = 4096;
+const uint N = 4096;
+const uint BM = 32;
+
+layout(local_size_x = BM, local_size_y = 1, local_size_z = 1) in;
+
+/// A contiguous global memory block of size M * N in row major order.
+layout(set = 0, binding = 0) buffer OutputBuffer {
+    float output_buffer[];
+};
+
+shared float shared_block[BM];
+
+void main() {
+    // Prepares the shared memory block.
+    for (uint i=0; i<BM; i++) {
+        shared_block[i] = float(gl_LocalInvocationIndex);
+    }
+
+    barrier();
+
+    uint offset = 0;
+    for (uint n=0; n<N; n++) {
+        output_buffer[offset + gl_GlobalInvocationID.x] = shared_block[gl_LocalInvocationIndex];
+        barrier();
+    }
+}
