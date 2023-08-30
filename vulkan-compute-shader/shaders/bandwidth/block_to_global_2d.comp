@@ -15,7 +15,7 @@ shared float shared_block[BM * BN];
 
 void main() {
     // Collaboratively prepares the shared block
-    shared_block[gl_LocalInvocationIndex] = float(gl_GlobalInvocationID.x);
+    shared_block[gl_LocalInvocationIndex] = 1.0; // Some non-zero value
     barrier();
 
     // Write the shared block to the output buffer

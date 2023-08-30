@@ -34,7 +34,7 @@ void main() {
     uint thread_index = gl_LocalInvocationIndex;
     uint thread_num = BM * BN / TM;
 
-    uint tx =  thread_index % BN;
+    uint tx = thread_index % BN;
     uint ty = thread_index / BN * TM;
 
     uint a_global_offset = gl_WorkGroupID.y * BM * K;
@@ -68,13 +68,13 @@ void main() {
         a_global_offset += BK;
         b_global_offset += BK * N;
 
-        // for (uint i = 0; i < BK; i++) {
-        //     b_cache = b_shared[tx + i * BN];
-        //     for (uint j = 0; j < TM; j++) {
-        //         c_tile[j] += a_shared[(ty + j) * BK + i] * b_cache;
-        //     }
-        // }
-        // barrier();
+        for (uint i = 0; i < BK; i++) {
+            b_cache = b_shared[tx + i * BN];
+            for (uint j = 0; j < TM; j++) {
+                c_tile[j] += a_shared[(ty + j) * BK + i] * b_cache;
+            }
+        }
+        barrier();
     }
     for (uint j = 0; j < TM; j++) {
         c_global[c_global_offset + (ty + j) * N + tx] = alpha * c_tile[j] + beta * c_global[c_global_offset + (ty + j) * N + tx];

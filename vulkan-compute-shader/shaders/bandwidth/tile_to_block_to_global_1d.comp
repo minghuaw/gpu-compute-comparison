@@ -17,7 +17,7 @@ void main() {
     float local_buffer[TM];
     uint block_offset = gl_LocalInvocationID.x * TM;
     for (uint i = 0; i < TM; i++) {
-        local_buffer[i] = float(block_offset + i);
+        local_buffer[i] = 1.0; // Some non-zero value
     }
     barrier();
 

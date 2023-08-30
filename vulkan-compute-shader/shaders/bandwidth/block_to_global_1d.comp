@@ -15,7 +15,7 @@ shared float shared_block[BM];
 
 void main() {
     // Collaboratively prepares the shared memory block.
-    shared_block[gl_LocalInvocationIndex] = float(gl_LocalInvocationID.x);
+    shared_block[gl_LocalInvocationIndex] = 1.0; // Some non-zero value
     barrier();
 
     uint global_offset = gl_WorkGroupID.y * M + gl_WorkGroupID.x * BM;

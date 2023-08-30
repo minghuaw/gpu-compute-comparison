@@ -60,6 +60,7 @@ pub(crate) mod tile_to_global_1d {
     use super::*;
 
     const BM: usize = 64;
+    const BN: usize = 64;
 
     vulkano_shaders::shader! {
         ty: "compute",
@@ -68,7 +69,7 @@ pub(crate) mod tile_to_global_1d {
 
     pub(crate) fn run(device: Arc<Device>, queue: Arc<Queue>) -> Result<Duration, BoxError> {
         let shader = self::load(device.clone())?;
-        super::run(device, queue, shader, [(M / BM) as u32, N as u32, 1])
+        super::run(device, queue, shader, [(M / BM) as u32, (N / BN) as u32, 1])
     }
 }
 
@@ -77,7 +78,7 @@ pub(crate) mod tile_to_global_2d {
     //! is a small 2d array that is stored in the register file.
 }
 
-pub(crate) mod block_tile_to_global_1d {
+pub(crate) mod tile_to_block_to_global_1d {
     //! This kernel fisrt copies from tile to shared memory block and then copies
     //! from the shared memory block to the global memory.
     
@@ -88,7 +89,7 @@ pub(crate) mod block_tile_to_global_1d {
 
     vulkano_shaders::shader! {
         ty: "compute",
-        path: "./shaders/bandwidth/block_tile_to_global_1d.comp"
+        path: "./shaders/bandwidth/tile_to_block_to_global_1d.comp"
     }
 
     pub(crate) fn run(device: Arc<Device>, queue: Arc<Queue>) -> Result<Duration, BoxError> {
@@ -97,7 +98,7 @@ pub(crate) mod block_tile_to_global_1d {
     }
 }
 
-pub(crate) mod block_tile_to_global_2d {
+pub(crate) mod tile_to_block_to_global_2d {
     //! This kernel fisrt copies from tile to shared memory block and then copies
     //! from the shared memory block to the global memory.
 }
@@ -180,8 +181,13 @@ fn run(
     let elapsed = start.elapsed();
 
     let guard = output_buffer.read()?;
-    let read_index = 5000;
-    println!("output_buffer[{}]: {:?}", read_index, guard[read_index]);
+    assert!(guard.iter().all(|&x| x != 0.0)); // All elements should be non-zero
+    // for (i, &x) in guard.iter().enumerate() {
+    //     if x == 0.0 {
+    //         println!("zero at index {}", i);
+    //         // break;
+    //     }
+    // }
 
     Ok(elapsed)
 }
