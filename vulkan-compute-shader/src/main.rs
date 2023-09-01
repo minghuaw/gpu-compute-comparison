@@ -17,6 +17,9 @@ fn main() {
     let elapsed = bandwidth::tile_to_global_1d::run(device.clone(), queue.clone()).unwrap();
     println!("bandwidth::tile_to_global_1d elapsed: {:?}", elapsed);
 
+    let elapsed = bandwidth::tile_to_global_2d::run(device.clone(), queue.clone()).unwrap();
+    println!("bandwidth::tile_to_global_2d elapsed: {:?}", elapsed);
+
     // let elapsed = bandwidth::tile_to_block_to_global_1d::run(device.clone(), queue.clone()).unwrap();
     // println!("bandwidth::tile_to_block_to_global_1d elapsed: {:?}", elapsed);
 

@@ -1,0 +1,36 @@
+#version 460
+
+const uint M = 4096;
+const uint N = 4096;
+const uint BM = 64;
+const uint BN = 64;
+const uint TM = 8;
+const uint TN = 8;
+
+layout(local_size_x = BM/TM, local_size_y = BN/TN, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) buffer OutputBuffer {
+    float output_buffer[];
+};
+
+void main() {
+    float local_buffer[TM * TN];
+    uint block_offset = gl_LocalInvocationID.x * TM;
+    for (uint i = 0; i < TM * TN; i++) {
+        local_buffer[i] = 1.0; // Some non-zero value
+    }
+    barrier();
+
+    // uint thread_row = gl_LocalInvocationIndex / (BN / TN) * TM;
+    // uint thread_col = gl_LocalInvocationIndex % (BN / TN) * TN;
+
+    uint thread_row = gl_LocalInvocationIndex / BN * TM;
+    uint thread_col = gl_LocalInvocationIndex % BN;
+    
+    uint global_offset = gl_WorkGroupID.y * BM * N + gl_WorkGroupID.x * BN;
+    for (uint i = 0; i < TM; i++) {
+        output_buffer[global_offset + (thread_row + i) * N + thread_col + 0] = 1.0;
+    }
+    // for (uint j = 0; j < 1; j++) {
+    // }
+}
