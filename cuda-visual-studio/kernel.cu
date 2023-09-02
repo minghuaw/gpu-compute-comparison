@@ -78,9 +78,10 @@ int main()
     cudaCheck(cudaEventSynchronize(beg));
     cudaCheck(cudaEventSynchronize(end));
     cudaCheck(cudaEventElapsedTime(&elapsed_time, beg, end));
+    float elapsed_time_in_seconds = elapsed_time / 1000;
 
     printf("Average elapsed time: (%f) ms, performance: (%f) GFLOPS. size: (%d).\n",
-        elapsed_time / (float)repeats, 2. * 1e-9 * (float)repeats * M * M * M / elapsed_time, M);
+        elapsed_time / (float)repeats, 2. * 1e-9 * (float)repeats * M * M * M / elapsed_time_in_seconds, M);
 
     cudaCheck(cudaMemcpy(host_matrix_a, device_matrix_a, sizeof(float) * M * K, cudaMemcpyDeviceToHost));
     cudaCheck(cudaMemcpy(host_matrix_a, device_matrix_a, sizeof(float) * K * N, cudaMemcpyDeviceToHost));
