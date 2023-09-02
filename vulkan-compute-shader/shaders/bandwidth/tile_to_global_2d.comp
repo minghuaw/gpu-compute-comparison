@@ -1,11 +1,14 @@
 #version 460
 
 const uint M = 4096;
-const uint N = 4096 / 4;
+const uint N = 4096;
 const uint BM = 64;
 const uint BN = 64;
-const uint TM = 4;
-const uint TN = 4;
+const uint TM = 8;
+const uint TN = 4; // This gives the best performance 
+
+const uint VN = N / 4; // Number of vec4s in a row
+const uint VBN = BN / 4; // Number of vec4s in a block row
 
 layout(local_size_x = BM/TM, local_size_y = BN/TN, local_size_z = 1) in;
 
@@ -23,14 +26,10 @@ void main() {
 
     uint thread_row = gl_LocalInvocationIndex / (BN / TN) * TM;
     uint thread_col = (gl_LocalInvocationIndex % (BN / TN) * TN) / 4;
-    uint global_offset = gl_WorkGroupID.y * BM * N + gl_WorkGroupID.x * BN;
+    uint global_offset = gl_WorkGroupID.y * BM * VN + gl_WorkGroupID.x * VBN;
     for (uint i = 0; i < TM; i++) {
-        // for (uint j = 0; j < TN; j++) {
-        //     output_buffer[global_offset + (thread_row + i) * N + thread_col + j] = local_buffer[i*TN + j];
-        // }
+        // Manual vectorization
         vec4 v = vec4(local_buffer[i*TN + 0], local_buffer[i*TN + 1], local_buffer[i*TN + 2], local_buffer[i*TN + 3]);
-        output_buffer[global_offset + (thread_row + i) * N + (thread_col + 0)] = v;
-        // v = vec4(local_buffer[i*TN + 4], local_buffer[i*TN + 5], local_buffer[i*TN + 6], local_buffer[i*TN + 7]);
-        // output_buffer[global_offset + (thread_row + i) * N + (thread_col + 1)] = v;
+        output_buffer[global_offset + (thread_row + i) * VN + (thread_col + 0)] = v;
     }
 }

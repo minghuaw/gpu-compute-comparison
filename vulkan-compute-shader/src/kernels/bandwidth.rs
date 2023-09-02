@@ -210,8 +210,8 @@ fn run(
     let elapsed = start.elapsed();
 
     let guard = output_buffer.read()?;
-    println!("[{}]", guard[4]);
-    // assert!(guard.iter().all(|&x| x != 0.0)); // All elements should be non-zero
+    // println!("[{}]", guard[100*4096]);
+    assert!(guard.iter().all(|&x| x != 0.0)); // All elements should be non-zero
     // for (i, &x) in guard.iter().enumerate() {
     //     if x == 0.0 {
     //         println!("zero at index {}", i);
