@@ -1,4 +1,5 @@
 #version 460
+#extension GL_EXT_control_flow_attributes : enable
 
 const uint M = 4096;
 const uint N = 4096;
@@ -6,7 +7,7 @@ const uint K = 4096;
 const uint BM = 64;
 const uint BN = 64;
 const uint BK = 32;
-const uint TM = 8;
+const uint TM = 8; // Must be powers of 2
 const uint TN = 4; // TN must be 4 for manual vectorization with vec4
 
 const uint VN = N / 4; // number of vec4 in N
@@ -52,7 +53,7 @@ void main() {
     uint b_tile_stride = thread_num / BN;
 
     float c_tile[TM * TN];
-    for (uint i = 0; i < TM * TN; i++) {
+    [[unroll]] for (uint i = 0; i < TM * TN; i++) {
         c_tile[i] = 0.0;
     }
 
@@ -68,9 +69,9 @@ void main() {
         a_global_offset += BK;
         b_global_offset += BK * N;
 
-        for (uint kk=0; kk<BK; kk++) {
-            for (uint i=0; i<TM; i++) {
-                for (uint j=0; j<TN; j++) {
+        [[unroll]] for (uint kk=0; kk<BK; kk++) {
+            [[unroll]] for (uint i=0; i<TM; i++) {
+                [[unroll]] for (uint j=0; j<TN; j++) {
                     c_tile[i*TN+j] += a_shared[(ty + i) * BK + kk] * b_shared[kk * BN + tx + j];
                 }
             }
@@ -80,7 +81,7 @@ void main() {
 
     uint thread_row = ty;
     uint thread_col = tx / 4;
-    for (uint i = 0; i < TM; i++) {
+    [[unroll]] for (uint i = 0; i < TM; i++) {
         // Manual vectorization
         vec4 v = vec4(c_tile[i*TN + 0], c_tile[i*TN + 1], c_tile[i*TN + 2], c_tile[i*TN + 3]);
         c_global[global_offset + (thread_row + i) * VN + (thread_col + 0)] = v;
