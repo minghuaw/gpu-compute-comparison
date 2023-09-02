@@ -81,9 +81,19 @@ pub(crate) mod block_tiling_1d {
 }
 
 pub(crate) mod block_tiling_2d {
+    use super::*;
+
+    const BM: usize = 64;
+    const BN: usize = 64;
+
     vulkano_shaders::shader! {
         ty: "compute",
         path: "./shaders/matmul/block_tiling_2d.comp"
+    }
+
+    pub(crate) fn run(device: Arc<Device>, queue: Arc<Queue>) -> Result<Duration, BoxError> {
+        let shader = self::load(device.clone())?;
+        super::run(device, queue, shader, [(M / BM) as u32, (N / BN) as u32, 1])
     }
 }
 
@@ -208,9 +218,9 @@ fn run(
     future.wait(None)?;
     let elapsed = start.elapsed();
 
-    // let mut expected: Array2<f32> = ArrayBase::zeros((M, N));
-    // general_mat_mul(1.0, &matrix_a, &matrix_b, 1.0, &mut expected);
-    // assert!(is_equal::<M, N>(matrix_c_buf, expected));
+    let mut expected: Array2<f32> = ArrayBase::zeros((M, N));
+    general_mat_mul(1.0, &matrix_a, &matrix_b, 1.0, &mut expected);
+    assert!(is_equal::<M, N>(matrix_c_buf, expected));
 
     Ok(elapsed)
 }

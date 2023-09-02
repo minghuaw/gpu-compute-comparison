@@ -7,44 +7,41 @@ const uint BM = 64;
 const uint BN = 64;
 const uint BK = 32;
 const uint TM = 8;
-const uint TN = 1; // Performance is significantly worse when TN is not 1.
-                   // The performance cost mainly comes from writing back to global C.
+const uint TN = 4; // TN must be 4 for manual vectorization with vec4
+
+const uint VN = N / 4; // number of vec4 in N
+const uint VBN = BN / 4; // number of vec4 in BN
 
 const float alpha = 1.0;
 const float beta = 1.0;
 
 layout(local_size_x = BM/TM, local_size_y = BN/TN, local_size_z = 1) in;
 
-layout(set = 0, binding = 0) buffer MatrixC {
-    float c_global[];
-};
-
-layout(set = 0, binding = 1) buffer readonly MatrixA {
+layout(set = 0, binding = 0) buffer readonly MatrixA {
     float a_global[];
 };
 
-layout(set = 0, binding = 2) buffer readonly MatrixB {
+layout(set = 0, binding = 1) buffer readonly MatrixB {
     float b_global[];
+};
+
+layout(set = 0, binding = 2) buffer MatrixC {
+    vec4 c_global[]; // use vec4 for manual vectorization
 };
 
 shared float a_shared[BM * BK];
 shared float b_shared[BK * BN];
 
 void main() {
-    // This is just to make sure the buffers are not optimized away
-    a_shared[0] = a_global[0];
-    b_shared[0] = b_global[0];
-    c_global[0] = a_shared[0] + b_shared[0];
-
     uint thread_index = gl_LocalInvocationIndex;
-
     uint thread_num = (BN / TN) * (BM / TM);
-    uint tx = (thread_index % (BN / TN)) * TN;
+    
     uint ty = (thread_index / (BN / TN)) * TM;
+    uint tx = (thread_index % (BN / TN)) * TN;
 
     uint a_global_offset = gl_WorkGroupID.y * BM * K;
     uint b_global_offset = gl_WorkGroupID.x * BN;
-    const uint c_global_offset = gl_WorkGroupID.y * BM * N + gl_WorkGroupID.x * BN;
+    const uint global_offset = gl_WorkGroupID.y * BM * VN + gl_WorkGroupID.x * VBN;
 
     uint a_tile_row = thread_index / BK;
     uint a_tile_col = thread_index % BK;
@@ -81,14 +78,11 @@ void main() {
         barrier();
     }
 
-    // TODO: Writing to C is slow when TN is not 1.
-    for (uint i=0; i<TM; i++) {
-        for (uint j=0; j<TN; j++) {
-            c_global[c_global_offset + (ty + i) * N + tx + j] = alpha * c_tile[i*TN+j] + beta * c_global[c_global_offset + (ty + i) * N + tx + j];
-        }
+    uint thread_row = ty;
+    uint thread_col = tx / 4;
+    for (uint i = 0; i < TM; i++) {
+        // Manual vectorization
+        vec4 v = vec4(c_tile[i*TN + 0], c_tile[i*TN + 1], c_tile[i*TN + 2], c_tile[i*TN + 3]);
+        c_global[global_offset + (thread_row + i) * VN + (thread_col + 0)] = v;
     }
-    // for (uint i=0; i<TM; i++) {
-    //     c_global[c_global_offset + (ty + i) * N + tx + 0] = alpha * c_tile[i*TN+0] + beta * c_global[c_global_offset + (ty + i) * N + tx + 0];
-    //     c_global[c_global_offset + (ty + i) * N + tx + 1] = alpha * c_tile[i*TN+1] + beta * c_global[c_global_offset + (ty + i) * N + tx + 1];
-    // }
 }
