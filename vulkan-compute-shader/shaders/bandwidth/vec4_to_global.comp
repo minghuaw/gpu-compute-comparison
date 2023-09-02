@@ -1,0 +1,18 @@
+#version 460
+
+const uint M = 4096;
+const uint N = 4096;
+
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) buffer OutputBuffer {
+    vec4 output_buffer[];
+};
+
+void main() {
+    const uint col = gl_GlobalInvocationID.x;
+    const uint row = gl_GlobalInvocationID.y;
+
+    vec4 v = vec4(1.0, 1.0, 1.0, 1.0);
+    output_buffer[row * N + col] = v;
+}

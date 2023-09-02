@@ -1,11 +1,11 @@
 #version 460
 
 const uint M = 4096;
-const uint N = 4096;
+const uint N = 4096 / 4;
 const uint BM = 64;
 const uint BN = 64;
-const uint TM = 8;
-const uint TN = 8;
+const uint TM = 4;
+const uint TN = 4;
 
 layout(local_size_x = BM/TM, local_size_y = BN/TN, local_size_z = 1) in;
 
@@ -22,12 +22,15 @@ void main() {
     barrier();
 
     uint thread_row = gl_LocalInvocationIndex / (BN / TN) * TM;
-    uint thread_col = gl_LocalInvocationIndex % (BN / TN) * TN;
+    uint thread_col = (gl_LocalInvocationIndex % (BN / TN) * TN) / 4;
     uint global_offset = gl_WorkGroupID.y * BM * N + gl_WorkGroupID.x * BN;
     for (uint i = 0; i < TM; i++) {
-        vec4 v = vec4(local_buffer[i + 0], local_buffer[i + 1], local_buffer[i + 2], local_buffer[i + 3]);
-        output_buffer[global_offset + (thread_row + i) * N + thread_col + 0] = v;
+        // for (uint j = 0; j < TN; j++) {
+        //     output_buffer[global_offset + (thread_row + i) * N + thread_col + j] = local_buffer[i*TN + j];
+        // }
+        vec4 v = vec4(local_buffer[i*TN + 0], local_buffer[i*TN + 1], local_buffer[i*TN + 2], local_buffer[i*TN + 3]);
+        output_buffer[global_offset + (thread_row + i) * N + (thread_col + 0)] = v;
+        // v = vec4(local_buffer[i*TN + 4], local_buffer[i*TN + 5], local_buffer[i*TN + 6], local_buffer[i*TN + 7]);
+        // output_buffer[global_offset + (thread_row + i) * N + (thread_col + 1)] = v;
     }
-    // for (uint j = 0; j < 1; j++) {
-    // }
 }

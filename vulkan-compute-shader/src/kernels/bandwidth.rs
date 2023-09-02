@@ -118,6 +118,20 @@ pub(crate) mod tile_to_block_to_global_2d {
     //! from the shared memory block to the global memory.
 }
 
+pub(crate) mod vec4_to_global {
+    use super::*;
+
+    vulkano_shaders::shader! {
+        ty: "compute",
+        path: "./shaders/bandwidth/vec4_to_global.comp"
+    }
+
+    pub(crate) fn run(device: Arc<Device>, queue: Arc<Queue>) -> Result<Duration, BoxError> {
+        let shader = self::load(device.clone())?;
+        super::run(device, queue, shader, [M as u32, N as u32 / 4, 1])
+    }
+}
+
 fn allocate_output_buffer(
     allocator: &StandardMemoryAllocator,
 ) -> Result<Subbuffer<[f32]>, BufferError> {
@@ -196,13 +210,14 @@ fn run(
     let elapsed = start.elapsed();
 
     let guard = output_buffer.read()?;
+    println!("[{}]", guard[4]);
     // assert!(guard.iter().all(|&x| x != 0.0)); // All elements should be non-zero
-    for (i, &x) in guard.iter().enumerate() {
-        if x == 0.0 {
-            println!("zero at index {}", i);
-            break;
-        }
-    }
+    // for (i, &x) in guard.iter().enumerate() {
+    //     if x == 0.0 {
+    //         println!("zero at index {}", i);
+    //         break;
+    //     }
+    // }
 
     Ok(elapsed)
 }
