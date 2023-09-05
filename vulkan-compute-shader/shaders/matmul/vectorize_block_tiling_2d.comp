@@ -54,6 +54,16 @@ void main() {
     uint b_shared_col = thread_index % VBN;
     uint b_shared_stride = thread_num / VBN;
 
+    float a_tile[TM];
+    [[unroll]] for (uint i = 0; i < TM; i++) {
+        a_tile[i] = 0.0;
+    }
+
+    float b_tile[TN];
+    [[unroll]] for (uint i = 0; i < TN; i++) {
+        b_tile[i] = 0.0;
+    }
+
     float c_tile[TM * TN];
     [[unroll]] for (uint i = 0; i < TM * TN; i++) {
         c_tile[i] = 0.0;
@@ -82,9 +92,27 @@ void main() {
         b_global_offset += BK * VN;
 
         [[unroll]] for (uint kk=0; kk<BK; kk++) {
+            [[unroll]] for (uint i=0; i<TM; i+=4) {
+                // a_tile[i] = a_shared[(ty + i) * BK + kk];
+                vec4 tmp = vec4(a_shared[(ty + i) * BK + kk], a_shared[(ty + i + 1) * BK + kk], a_shared[(ty + i + 2) * BK + kk], a_shared[(ty + i + 3) * BK + kk]);
+                a_tile[i] = tmp.x;
+                a_tile[i + 1] = tmp.y;
+                a_tile[i + 2] = tmp.z;
+                a_tile[i + 3] = tmp.w;
+            }
+            [[unroll]] for (uint i=0; i<TN; i+=4) {
+                // b_tile[i] = b_shared[kk * BN + tx + i];
+                vec4 tmp = vec4(b_shared[kk * BN + tx + i], b_shared[kk * BN + tx + i + 1], b_shared[kk * BN + tx + i + 2], b_shared[kk * BN + tx + i + 3]);
+                b_tile[i] = tmp.x;
+                b_tile[i + 1] = tmp.y;
+                b_tile[i + 2] = tmp.z;
+                b_tile[i + 3] = tmp.w;
+            }
+
             [[unroll]] for (uint i=0; i<TM; i++) {
                 [[unroll]] for (uint j=0; j<TN; j++) {
-                    c_tile[i*TN+j] += a_shared[(ty + i) * BK + kk] * b_shared[kk * BN + tx + j];
+                    // c_tile[i*TN+j] += a_shared[(ty + i) * BK + kk] * b_shared[kk * BN + tx + j];
+                    c_tile[i*TN+j] += a_tile[i] * b_tile[j];
                 }
             }
         }
