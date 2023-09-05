@@ -86,6 +86,10 @@ int main() {
         block_size = dim3(64, 1, 1);
         grid_size = dim3(M / 64, N / 64, 1);
         matmul::block_tiling_2d<M, N, K, 64, 64, 8, 8, 8><<<grid_size, block_size>>>(alpha, device_matrix_a, device_matrix_b, beta, device_matrix_c);
+
+//        block_size = dim3(256, 1, 1);
+//        grid_size = dim3(M / 128, N / 128, 1);
+//        matmul::vectorize_block_tiling_2d<128, 128, 8, 8, 8><<<grid_size, block_size>>>(M, N, K, alpha, device_matrix_a, device_matrix_b, beta, device_matrix_c);
     }
     cudaCheck(cudaEventRecord(end));
 
