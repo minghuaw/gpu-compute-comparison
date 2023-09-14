@@ -4,8 +4,8 @@
 const uint M = 4096;
 const uint N = 4096;
 const uint K = 4096;
-const uint BM = 64;
-const uint BN = 64;
+const uint BM = 128;
+const uint BN = 128;
 const uint BK = 32;
 const uint TM = 8; // Must be powers of 2
 const uint TN = 4; // TN must be 4 for manual vectorization with vec4

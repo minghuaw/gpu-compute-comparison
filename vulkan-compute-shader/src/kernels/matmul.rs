@@ -100,8 +100,8 @@ pub(crate) mod block_tiling_2d {
 pub(crate) mod vectorize_block_tiling_2d {
     use super::*;
 
-    const BM: usize = 64;
-    const BN: usize = 64;
+    const BM: usize = 128;
+    const BN: usize = 128;
 
     vulkano_shaders::shader! {
         ty: "compute",
@@ -111,6 +111,13 @@ pub(crate) mod vectorize_block_tiling_2d {
     pub(crate) fn run(device: Arc<Device>, queue: Arc<Queue>) -> Result<Duration, BoxError> {
         let shader = self::load(device.clone())?;
         super::run(device, queue, shader, [(M / BM) as u32, (N / BN) as u32, 1])
+    }
+}
+
+pub(crate) mod warp_tiling {
+    vulkano_shaders::shader! {
+        ty: "compute",
+        path: "./shaders/matmul/warp_tiling.comp"
     }
 }
 
