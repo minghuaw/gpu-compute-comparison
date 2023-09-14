@@ -326,6 +326,40 @@ namespace matmul {
             }
         }
     }
+
+//    template<
+//            const unsigned int BM,
+//            const unsigned int BN,
+//            const unsigned int BK,
+//            const unsigned int WM,
+//            const unsigned int WN,
+//            const unsigned int WK,
+//            const unsigned int TM,
+//            const unsigned int TN
+//    >
+//    __global__ void warp_tiling(
+//            int M, int N, int K,
+//            float alpha,
+//            float *A,
+//            float *B,
+//            float beta,
+//            float *C
+//    ) {
+//        const unsigned int bx = blockIdx.x;
+//        const unsigned int by = blockIdx.y;
+//
+////        const uint K10_NUM_THREADS = 128;
+////        const uint K10_BN = 128;
+////        const uint K10_BM = 128;
+////        const uint K10_BK = 16;
+////        const uint K10_WN = 64;
+////        const uint K10_WM = 64;
+////        const uint K10_WNITER = 4;
+////        const uint K10_TN = 4;
+////        const uint K10_TM = 8;
+////        dim3 blockDim(K10_NUM_THREADS);
+//
+//    }
 }
 
 #endif //CUDA_KERNEL_MATMUL_CUH

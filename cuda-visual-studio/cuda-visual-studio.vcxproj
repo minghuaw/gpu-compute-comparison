@@ -82,6 +82,7 @@
   <ItemGroup>
     <ClInclude Include="..\cuda-kernel\kernels\common.h" />
     <ClInclude Include="..\cuda-kernel\kernels\matmul.cuh" />
+    <ClInclude Include="..\cuda-kernel\kernels\ported.cuh" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

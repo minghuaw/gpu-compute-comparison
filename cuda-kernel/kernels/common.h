@@ -5,6 +5,8 @@
 #ifndef CUDA_KERNEL_COMMON_H
 #define CUDA_KERNEL_COMMON_H
 
+#define CEIL_DIV(M, N) (((M) + (N)-1) / (N))
+
 namespace common {
     const unsigned int M = 4096;
     const unsigned int N = 4096;
@@ -21,6 +23,8 @@ namespace common {
 
     const float alpha = 1.0;
     const float beta = 1.0;
+
+    const int WARPSIZE = 32; // warpSize is not constexpr
 
     /// Generate a contiguous random matrix in row major order
     void generate_random_matrix(float *matrix, unsigned int rows, unsigned int cols) {
