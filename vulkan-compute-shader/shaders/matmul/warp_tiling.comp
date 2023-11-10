@@ -1,5 +1,5 @@
 #version 460
-#extension GL_EXT_control_flow_attributes : enable
+#extension GL_EXT_control_flow_attributes: enable
 #extension GL_KHR_shader_subgroup_basic: enable
 
 const uint M = 4096;
@@ -8,6 +8,8 @@ const uint K = 4096;
 const uint BM = 128;
 const uint BN = 128;
 const uint BK = 32;
+const uint WM = 64;
+const uint WN = 64;
 const uint TM = 8; // Must be powers of 2
 const uint TN = 4; // TN must be 4 for manual vectorization with vec4
 
@@ -15,6 +17,9 @@ const uint VN = N / 4; // number of vec4 in N
 const uint VBN = BN / 4; // number of vec4 in BN
 const uint VK = K / 4; // number of vec4 in K
 const uint VBK = BK / 4; // number of vec4 in BK
+
+const uint SWM = 32; // Size of sub-warp tile in M
+const uint SWN = 16; // Size of sub-warp tile in N
 
 const float alpha = 1.0;
 const float beta = 1.0;
@@ -39,6 +44,12 @@ shared float b_shared[BK * BN];
 void main() {
     uint thread_index = gl_LocalInvocationIndex;
     uint thread_num = (BN / TN) * (BM / TM);
+
+    // Vulkan has built-in variable for subgroup/warp id
+    uint subgroup_size = gl_SubgroupSize;
+    uint subgroup_id = gl_SubgroupID;
+    uint subgroup_col = subgroup_id % (BN / WN);
+    uint subgroup_row = subgroup_id / (BN / WN);
     
     uint ty = (thread_index / (BN / TN)) * TM;
     uint tx = (thread_index % (BN / TN)) * TN;
