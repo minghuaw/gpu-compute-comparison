@@ -33,8 +33,13 @@ layout(set = 0, binding = 2) buffer MatrixC {
     vec4 c_global[]; // use vec4 for manual vectorization
 };
 
-shared float a_shared[BM * BK];
-shared float b_shared[BK * BN];
+shared float a_block[BM * BK];
+shared float b_block[BK * BN];
+
+// // block lives in shared memory
+// void load_block(out float block[], ) {
+
+// }
 
 void main() {
     uint thread_index = gl_LocalInvocationIndex;
@@ -47,45 +52,46 @@ void main() {
     uint b_global_offset = gl_WorkGroupID.x * VBN;
     const uint global_offset = gl_WorkGroupID.y * BM * VN + gl_WorkGroupID.x * VBN;
 
-    uint a_shared_row = thread_index / VBK;
-    uint a_shared_col = thread_index % VBK;
-    uint a_shared_stride = thread_num / VBK;
+    uint a_block_row = thread_index / VBK;
+    uint a_block_col = thread_index % VBK;
+    uint a_block_stride = thread_num / VBK;
 
-    uint b_shared_row = thread_index / VBN;
-    uint b_shared_col = thread_index % VBN;
-    uint b_shared_stride = thread_num / VBN;
+    uint b_block_row = thread_index / VBN;
+    uint b_block_col = thread_index % VBN;
+    uint b_block_stride = thread_num / VBN;
 
-    float a_tile[TM];
+    // Fragment should reside in register
+    float a_frag[TM];
     [[unroll]] for (uint i = 0; i < TM; i++) {
-        a_tile[i] = 0.0;
+        a_frag[i] = 0.0;
     }
 
-    float b_tile[TN];
+    float b_frag[TN];
     [[unroll]] for (uint i = 0; i < TN; i++) {
-        b_tile[i] = 0.0;
+        b_frag[i] = 0.0;
     }
 
-    float c_tile[TM * TN];
+    float c_frag[TM * TN];
     [[unroll]] for (uint i = 0; i < TM * TN; i++) {
-        c_tile[i] = 0.0;
+        c_frag[i] = 0.0;
     }
 
     for (uint k=0; k<K; k+=BK) {
-        for (uint i = 0; i < BM; i += a_shared_stride) {
-            vec4 tmp = a_global[a_global_offset + (a_shared_row + i) * VK + a_shared_col];
-            uint shared_index = (a_shared_row + i) * BK + a_shared_col * 4;
-            a_shared[shared_index + 0] = tmp.x;
-            a_shared[shared_index + 1] = tmp.y;
-            a_shared[shared_index + 2] = tmp.z;
-            a_shared[shared_index + 3] = tmp.w;
+        for (uint i = 0; i < BM; i += a_block_stride) {
+            vec4 tmp = a_global[a_global_offset + (a_block_row + i) * VK + a_block_col];
+            uint shared_index = (a_block_row + i) * BK + a_block_col * 4;
+            a_block[shared_index + 0] = tmp.x;
+            a_block[shared_index + 1] = tmp.y;
+            a_block[shared_index + 2] = tmp.z;
+            a_block[shared_index + 3] = tmp.w;
         }
-        for (uint i = 0; i < BK; i += b_shared_stride) {
-            vec4 tmp = b_global[b_global_offset + (b_shared_row + i) * VN + b_shared_col];
-            uint shared_index = (b_shared_row + i) * BN + b_shared_col * 4;
-            b_shared[shared_index + 0] = tmp.x;
-            b_shared[shared_index + 1] = tmp.y;
-            b_shared[shared_index + 2] = tmp.z;
-            b_shared[shared_index + 3] = tmp.w;
+        for (uint i = 0; i < BK; i += b_block_stride) {
+            vec4 tmp = b_global[b_global_offset + (b_block_row + i) * VN + b_block_col];
+            uint shared_index = (b_block_row + i) * BN + b_block_col * 4;
+            b_block[shared_index + 0] = tmp.x;
+            b_block[shared_index + 1] = tmp.y;
+            b_block[shared_index + 2] = tmp.z;
+            b_block[shared_index + 3] = tmp.w;
         }
 
         barrier();
@@ -94,26 +100,26 @@ void main() {
 
         [[unroll]] for (uint kk=0; kk<BK; kk++) {
             [[unroll]] for (uint i=0; i<TM; i+=4) {
-                // a_tile[i] = a_shared[(ty + i) * BK + kk];
-                vec4 tmp = vec4(a_shared[(ty + i) * BK + kk], a_shared[(ty + i + 1) * BK + kk], a_shared[(ty + i + 2) * BK + kk], a_shared[(ty + i + 3) * BK + kk]);
-                a_tile[i] = tmp.x;
-                a_tile[i + 1] = tmp.y;
-                a_tile[i + 2] = tmp.z;
-                a_tile[i + 3] = tmp.w;
+                // a_frag[i] = a_block[(ty + i) * BK + kk];
+                vec4 tmp = vec4(a_block[(ty + i) * BK + kk], a_block[(ty + i + 1) * BK + kk], a_block[(ty + i + 2) * BK + kk], a_block[(ty + i + 3) * BK + kk]);
+                a_frag[i] = tmp.x;
+                a_frag[i + 1] = tmp.y;
+                a_frag[i + 2] = tmp.z;
+                a_frag[i + 3] = tmp.w;
             }
             [[unroll]] for (uint i=0; i<TN; i+=4) {
-                // b_tile[i] = b_shared[kk * BN + tx + i];
-                vec4 tmp = vec4(b_shared[kk * BN + tx + i], b_shared[kk * BN + tx + i + 1], b_shared[kk * BN + tx + i + 2], b_shared[kk * BN + tx + i + 3]);
-                b_tile[i] = tmp.x;
-                b_tile[i + 1] = tmp.y;
-                b_tile[i + 2] = tmp.z;
-                b_tile[i + 3] = tmp.w;
+                // b_frag[i] = b_block[kk * BN + tx + i];
+                vec4 tmp = vec4(b_block[kk * BN + tx + i], b_block[kk * BN + tx + i + 1], b_block[kk * BN + tx + i + 2], b_block[kk * BN + tx + i + 3]);
+                b_frag[i] = tmp.x;
+                b_frag[i + 1] = tmp.y;
+                b_frag[i + 2] = tmp.z;
+                b_frag[i + 3] = tmp.w;
             }
 
             [[unroll]] for (uint i=0; i<TM; i++) {
                 [[unroll]] for (uint j=0; j<TN; j++) {
-                    // c_tile[i*TN+j] += a_shared[(ty + i) * BK + kk] * b_shared[kk * BN + tx + j];
-                    c_tile[i*TN+j] += a_tile[i] * b_tile[j];
+                    // c_frag[i*TN+j] += a_block[(ty + i) * BK + kk] * b_block[kk * BN + tx + j];
+                    c_frag[i*TN+j] += a_frag[i] * b_frag[j];
                 }
             }
         }
@@ -124,7 +130,7 @@ void main() {
     uint thread_col = tx / 4;
     [[unroll]] for (uint i = 0; i < TM; i++) {
         // Manual vectorization
-        vec4 v = vec4(c_tile[i*TN + 0], c_tile[i*TN + 1], c_tile[i*TN + 2], c_tile[i*TN + 3]);
+        vec4 v = vec4(c_frag[i*TN + 0], c_frag[i*TN + 1], c_frag[i*TN + 2], c_frag[i*TN + 3]);
         c_global[global_offset + (thread_row + i) * VN + (thread_col + 0)] = v;
     }
 }
