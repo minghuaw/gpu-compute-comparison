@@ -36,11 +36,6 @@ layout(set = 0, binding = 2) buffer MatrixC {
 shared float a_block[BM * BK];
 shared float b_block[BK * BN];
 
-// // block lives in shared memory
-// void load_block(out float block[], ) {
-
-// }
-
 void main() {
     uint thread_index = gl_LocalInvocationIndex;
     uint thread_num = (BN / TN) * (BM / TM);
