@@ -94,21 +94,12 @@ void main() {
         b_global_offset += BK * VN;
 
         [[unroll]] for (uint kk=0; kk<BK; kk++) {
-            [[unroll]] for (uint i=0; i<TM; i+=4) {
-                // a_frag[i] = a_block[(ty + i) * BK + kk];
-                vec4 tmp = vec4(a_block[(ty + i) * BK + kk], a_block[(ty + i + 1) * BK + kk], a_block[(ty + i + 2) * BK + kk], a_block[(ty + i + 3) * BK + kk]);
-                a_frag[i] = tmp.x;
-                a_frag[i + 1] = tmp.y;
-                a_frag[i + 2] = tmp.z;
-                a_frag[i + 3] = tmp.w;
+            for (uint i=0; i<TM; i++) {
+                a_frag[i] = a_block[(ty + i) * BK + kk];
             }
-            [[unroll]] for (uint i=0; i<TN; i+=4) {
-                // b_frag[i] = b_block[kk * BN + tx + i];
-                vec4 tmp = vec4(b_block[kk * BN + tx + i], b_block[kk * BN + tx + i + 1], b_block[kk * BN + tx + i + 2], b_block[kk * BN + tx + i + 3]);
-                b_frag[i] = tmp.x;
-                b_frag[i + 1] = tmp.y;
-                b_frag[i + 2] = tmp.z;
-                b_frag[i + 3] = tmp.w;
+
+            for (uint i=0; i<TN; i++) {
+                b_frag[i] = b_block[kk * BN + tx + i];
             }
 
             [[unroll]] for (uint i=0; i<TM; i++) {
