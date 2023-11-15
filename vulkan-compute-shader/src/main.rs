@@ -41,4 +41,7 @@ fn main() {
 
     let elapsed = kernels::matmul::padding::run(device.clone(), queue.clone()).unwrap();
     println!("matmul::padding elapsed: {:?}", elapsed);
+
+    // let elapsed = kernels::matmul::double_buffer::run(device.clone(), queue.clone()).unwrap();
+    // println!("matmul::double_buffer elapsed: {:?}", elapsed);
 }
