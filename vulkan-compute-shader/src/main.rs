@@ -36,9 +36,9 @@ fn main() {
     // let elapsed = kernels::matmul::block_tiling_2d::run(device.clone(), queue.clone()).unwrap();
     // println!("matmul::block_tiling_2d elapsed: {:?}", elapsed);
 
-    let elapsed = kernels::matmul::vectorize_block_tiling_2d::run(device.clone(), queue.clone()).unwrap();
-    println!("matmul::vectorize_block_tiling_2d elapsed: {:?}", elapsed);
+    // let elapsed = kernels::matmul::vectorize_block_tiling_2d::run(device.clone(), queue.clone()).unwrap();
+    // println!("matmul::vectorize_block_tiling_2d elapsed: {:?}", elapsed);
 
-    // let elapsed = kernels::matmul::wavefront_tiling::run(device.clone(), queue.clone()).unwrap();
-    // println!("matmul::warp_tiling elapsed: {:?}", elapsed);
+    let elapsed = kernels::matmul::padding::run(device.clone(), queue.clone()).unwrap();
+    println!("matmul::padding elapsed: {:?}", elapsed);
 }

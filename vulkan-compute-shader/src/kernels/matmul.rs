@@ -114,7 +114,7 @@ pub(crate) mod vectorize_block_tiling_2d {
     }
 }
 
-pub(crate) mod wavefront_tiling {
+pub(crate) mod padding {
     use super::*;
 
     const BM: usize = 128;
@@ -122,7 +122,7 @@ pub(crate) mod wavefront_tiling {
 
     vulkano_shaders::shader! {
         ty: "compute",
-        path: "./shaders/matmul/wavefront_tiling.comp"
+        path: "./shaders/matmul/padding.comp"
     }
 
     pub(crate) fn run(device: Arc<Device>, queue: Arc<Queue>) -> Result<Duration, BoxError> {
@@ -252,9 +252,9 @@ fn run(
     future.wait(None)?;
     let elapsed = start.elapsed();
 
-    // let mut expected: Array2<f32> = ArrayBase::zeros((M, N));
-    // general_mat_mul(1.0, &matrix_a, &matrix_b, 1.0, &mut expected);
-    // assert!(is_equal::<M, N>(matrix_c_buf, expected));
+    let mut expected: Array2<f32> = ArrayBase::zeros((M, N));
+    general_mat_mul(1.0, &matrix_a, &matrix_b, 1.0, &mut expected);
+    assert!(is_equal::<M, N>(matrix_c_buf, expected));
 
     Ok(elapsed)
 }

@@ -1,0 +1,122 @@
+#version 460
+#extension GL_EXT_control_flow_attributes : enable
+#extension GL_KHR_shader_subgroup_basic: enable
+
+const uint M = 4096;
+const uint N = 4096;
+const uint K = 4096;
+const uint BM = 128;
+const uint BN = 128;
+const uint BK = 32;
+const uint TM = 8; // Must be powers of 2
+const uint TN = 4; // TN must be 4 for manual vectorization with vec4
+
+const uint VN = N / 4; // number of vec4 in N
+const uint VBN = BN / 4; // number of vec4 in BN
+const uint VK = K / 4; // number of vec4 in K
+const uint VBK = BK / 4; // number of vec4 in BK
+
+const float alpha = 1.0;
+const float beta = 1.0;
+
+layout(local_size_x = BM/TM, local_size_y = BN/TN, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) buffer readonly MatrixA {
+    vec4 a_global[];
+};
+
+layout(set = 0, binding = 1) buffer readonly MatrixB {
+    vec4 b_global[];
+};
+
+layout(set = 0, binding = 2) buffer MatrixC {
+    vec4 c_global[]; // use vec4 for manual vectorization
+};
+
+shared float a_block[BM * (BK + 1)];
+shared float b_block[BK * (BN + 1)];
+
+void main() {
+    uint thread_index = gl_LocalInvocationIndex;
+    uint thread_num = (BN / TN) * (BM / TM);
+    
+    uint ty = (thread_index / (BN / TN)) * TM;
+    uint tx = (thread_index % (BN / TN)) * TN;
+
+    uint a_global_offset = gl_WorkGroupID.y * BM * VK;
+    uint b_global_offset = gl_WorkGroupID.x * VBN;
+    const uint global_offset = gl_WorkGroupID.y * BM * VN + gl_WorkGroupID.x * VBN;
+
+    uint a_block_row = thread_index / VBK;
+    uint a_block_col = thread_index % VBK;
+    uint a_block_stride = thread_num / VBK;
+
+    uint b_block_row = thread_index / VBN;
+    uint b_block_col = thread_index % VBN;
+    uint b_block_stride = thread_num / VBN;
+
+    // Fragment should reside in register
+    float a_frag[TM];
+    [[unroll]] for (uint i = 0; i < TM; i++) {
+        a_frag[i] = 0.0;
+    }
+
+    float b_frag[TN];
+    [[unroll]] for (uint i = 0; i < TN; i++) {
+        b_frag[i] = 0.0;
+    }
+
+    float c_frag[TM * TN];
+    [[unroll]] for (uint i = 0; i < TM * TN; i++) {
+        c_frag[i] = 0.0;
+    }
+
+    for (uint k=0; k<K; k+=BK) {
+        for (uint i = 0; i < BM; i += a_block_stride) {
+            vec4 tmp = a_global[a_global_offset + (a_block_row + i) * VK + a_block_col];
+            uint shared_index = (a_block_row + i) * (BK + 1) + a_block_col * 4;
+            a_block[shared_index + 0] = tmp.x;
+            a_block[shared_index + 1] = tmp.y;
+            a_block[shared_index + 2] = tmp.z;
+            a_block[shared_index + 3] = tmp.w;
+        }
+        for (uint i = 0; i < BK; i += b_block_stride) {
+            vec4 tmp = b_global[b_global_offset + (b_block_row + i) * VN + b_block_col];
+            uint shared_index = (b_block_row + i) * (BN + 1) + b_block_col * 4;
+            b_block[shared_index + 0] = tmp.x;
+            b_block[shared_index + 1] = tmp.y;
+            b_block[shared_index + 2] = tmp.z;
+            b_block[shared_index + 3] = tmp.w;
+        }
+
+        barrier();
+        a_global_offset += VBK;
+        b_global_offset += BK * VN;
+
+        [[unroll]] for (uint kk=0; kk<BK; kk++) {
+            for (uint i=0; i<TM; i++) {
+                a_frag[i] = a_block[(ty + i) * (BK + 1) + kk];
+            }
+
+            for (uint i=0; i<TN; i++) {
+                b_frag[i] = b_block[kk * (BN + 1) + tx + i];
+            }
+
+            [[unroll]] for (uint i=0; i<TM; i++) {
+                [[unroll]] for (uint j=0; j<TN; j++) {
+                    // c_frag[i*TN+j] += a_block[(ty + i) * BK + kk] * b_block[kk * BN + tx + j];
+                    c_frag[i*TN+j] += a_frag[i] * b_frag[j];
+                }
+            }
+        }
+        barrier();
+    }
+
+    uint thread_row = ty;
+    uint thread_col = tx / 4;
+    [[unroll]] for (uint i = 0; i < TM; i++) {
+        // Manual vectorization
+        vec4 v = vec4(c_frag[i*TN + 0], c_frag[i*TN + 1], c_frag[i*TN + 2], c_frag[i*TN + 3]);
+        c_global[global_offset + (thread_row + i) * VN + (thread_col + 0)] = v;
+    }
+}
