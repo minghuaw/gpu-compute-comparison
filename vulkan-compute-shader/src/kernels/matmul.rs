@@ -135,8 +135,8 @@ pub(crate) mod padding {
 pub(crate) mod double_buffer {
     use super::*;
 
-    const BM: usize = 128;
-    const BN: usize = 128;
+    const BM: usize = 64;
+    const BN: usize = 64;
 
     vulkano_shaders::shader! {
         ty: "compute",
