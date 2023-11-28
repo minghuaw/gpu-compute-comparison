@@ -74,28 +74,28 @@ int main()
         //grid_size = dim3(M / 128, N / 128, 1);
         //matmul::block_tiling_2d<M, N, K, 128, 128, 8, 8, 8><<<grid_size, block_size>>>(alpha, device_matrix_a, device_matrix_b, beta, device_matrix_c);
 
-        //block_size = dim3(256, 1, 1);
-        //grid_size = dim3(M / 128, N / 128, 1);
-        //matmul::vectorize_block_tiling_2d<128, 128, 8, 8, 8><<<grid_size, block_size>>>(M, N, K, alpha, device_matrix_a, device_matrix_b, beta, device_matrix_c);
+        block_size = dim3(256, 1, 1);
+        grid_size = dim3(M / 128, N / 128, 1);
+        matmul::vectorize_block_tiling_2d<128, 128, 8, 8, 8><<<grid_size, block_size>>>(M, N, K, alpha, device_matrix_a, device_matrix_b, beta, device_matrix_c);
 
 
-        const unsigned int K10_NUM_THREADS = 128;
-        const unsigned int K10_BN = 128;
-        const unsigned int K10_BM = 128;
-        const unsigned int K10_BK = 16;
-        const unsigned int K10_WN = 64;
-        const unsigned int K10_WM = 64;
-        const unsigned int K10_WNITER = 4;
-        const unsigned int K10_TN = 4;
-        const unsigned int K10_TM = 8;
-        dim3 blockDim(K10_NUM_THREADS);
+        //const unsigned int K10_NUM_THREADS = 128;
+        //const unsigned int K10_BN = 128;
+        //const unsigned int K10_BM = 128;
+        //const unsigned int K10_BK = 16;
+        //const unsigned int K10_WN = 64;
+        //const unsigned int K10_WM = 64;
+        //const unsigned int K10_WNITER = 4;
+        //const unsigned int K10_TN = 4;
+        //const unsigned int K10_TM = 8;
+        //dim3 blockDim(K10_NUM_THREADS);
 
-        constexpr unsigned int NUM_WARPS = K10_NUM_THREADS / 32;
+        //constexpr unsigned int NUM_WARPS = K10_NUM_THREADS / 32;
 
-        dim3 gridDim(CEIL_DIV(N, K10_BN), CEIL_DIV(M, K10_BM));
-        ported::sgemmWarptiling<K10_BM, K10_BN, K10_BK, K10_WM, K10_WN, K10_WNITER, K10_TM,
-                K10_TN, K10_NUM_THREADS>
-        <<<gridDim, blockDim>>>(M, N, K, alpha, device_matrix_a, device_matrix_b, beta, device_matrix_c);
+        //dim3 gridDim(CEIL_DIV(N, K10_BN), CEIL_DIV(M, K10_BM));
+        //ported::sgemmWarptiling<K10_BM, K10_BN, K10_BK, K10_WM, K10_WN, K10_WNITER, K10_TM,
+        //        K10_TN, K10_NUM_THREADS>
+        //<<<gridDim, blockDim>>>(M, N, K, alpha, device_matrix_a, device_matrix_b, beta, device_matrix_c);
 
     }
     cudaCheck(cudaEventRecord(end));

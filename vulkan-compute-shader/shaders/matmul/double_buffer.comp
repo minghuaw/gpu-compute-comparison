@@ -38,7 +38,7 @@ const uint BLOCK_1_INDEX = 1;
 shared float a_block[2][BM * BK];
 shared float b_block[2][BK * BN];
 
-// TODO: This is wrong
+// FIXME: This is wrong
 void main() {
     uint thread_index = gl_LocalInvocationIndex;
     uint thread_num = (BN / TN) * (BM / TM);
@@ -93,6 +93,7 @@ void main() {
         b_block[current_block][shared_index + 2] = tmp.z;
         b_block[current_block][shared_index + 3] = tmp.w;
     }
+    barrier();
 
     for (uint k=BK; k<K; k+=BK) {
         for (uint i = 0; i < BM; i += a_block_stride) {
@@ -112,7 +113,6 @@ void main() {
             b_block[next_block][shared_index + 3] = tmp.w;
         }
 
-        barrier();
         a_global_offset += VBK;
         b_global_offset += BK * VN;
 

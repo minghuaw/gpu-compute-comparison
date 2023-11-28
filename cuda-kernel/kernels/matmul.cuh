@@ -402,12 +402,6 @@ namespace matmul {
                 for (int n = 0; n < TN; n += 4) {
                     FETCH_FLOAT4(b_frag[n]) = FETCH_FLOAT4(Bs[OFFSET(i, tx + n, BN)]); // 偏移到当前thread tile
                 }
-//                for (int m = 0; m < TM; m++) {
-//                    for (int n = 0; n < TN; n++) {
-////                        accum[m][n] += a_frag[m] * b_frag[n];
-//                        accum[m * TN + n] += a_frag[m] * b_frag[n];
-//                    }
-//                }
                 compute_fragment<TM, TN>(a_frag, b_frag, c_frag);
             }
             __syncthreads();
@@ -428,6 +422,7 @@ namespace matmul {
             }
         }
     }
+
 
     template<
             const unsigned int BM,

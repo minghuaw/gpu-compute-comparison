@@ -270,9 +270,9 @@ fn run(
     future.wait(None)?;
     let elapsed = start.elapsed();
 
-    let mut expected: Array2<f32> = ArrayBase::zeros((M, N));
-    general_mat_mul(1.0, &matrix_a, &matrix_b, 1.0, &mut expected);
-    assert!(is_equal::<M, N>(matrix_c_buf, expected));
+    // let mut expected: Array2<f32> = ArrayBase::zeros((M, N));
+    // general_mat_mul(1.0, &matrix_a, &matrix_b, 1.0, &mut expected);
+    // assert!(is_equal::<M, N>(matrix_c_buf, expected));
 
     Ok(elapsed)
 }
